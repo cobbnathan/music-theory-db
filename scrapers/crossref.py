@@ -35,12 +35,21 @@ TARGET_JOURNALS: dict[str, str] = {
 }
 
 _BASE = "https://api.crossref.org/works"
-_ROWS = 200          # max items per page
+_ROWS = 1000         # CrossRef supports up to 1000 rows per page
 _DELAY = 1.0         # seconds between requests (CrossRef recommends ≤ 1 req/s)
+
+# Set CROSSREF_MAILTO in your environment to join the CrossRef polite pool,
+# which enables higher rate limits and deeper cursor pagination.
+# E.g.  export CROSSREF_MAILTO=you@example.com
+import os as _os
+_MAILTO = _os.environ.get("CROSSREF_MAILTO", "")
 
 _SESSION = requests.Session()
 _SESSION.headers.update({
+    # CrossRef polite pool: include mailto in User-Agent
     "User-Agent": (
+        f"music-theory-db/1.0 (research metadata harvester; "
+        f"mailto:{_MAILTO})" if _MAILTO else
         "music-theory-db/1.0 (research metadata harvester; "
         "contact: github.com/music-theory-db)"
     ),
@@ -67,21 +76,26 @@ def _get_json(url: str, params: dict) -> dict | None:
 
 
 def _iter_works(issn: str) -> Iterator[dict]:
-    """Yield every work registered under *issn* via cursor pagination."""
+    """Yield every work registered under *issn* via cursor pagination.
+
+    Without a CROSSREF_MAILTO environment variable the public pool may cap
+    results at ~400 per journal.  Set CROSSREF_MAILTO=you@example.com to join
+    the polite pool and retrieve complete result sets.
+    """
+    params: dict = {
+        "filter": f"issn:{issn}",
+        "rows": _ROWS,
+        "select": (
+            "DOI,title,author,issued,volume,issue,"
+            "abstract,type,container-title,ISSN"
+        ),
+    }
+    if _MAILTO:
+        params["mailto"] = _MAILTO
+
     cursor = "*"
     while True:
-        data = _get_json(
-            _BASE,
-            {
-                "filter": f"issn:{issn}",
-                "rows": _ROWS,
-                "cursor": cursor,
-                "select": (
-                    "DOI,title,author,issued,volume,issue,"
-                    "abstract,type,container-title,ISSN"
-                ),
-            },
-        )
+        data = _get_json(_BASE, {**params, "cursor": cursor})
         time.sleep(_DELAY)
 
         if data is None:
