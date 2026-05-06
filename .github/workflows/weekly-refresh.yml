@@ -1,0 +1,36 @@
+name: Weekly Data Refresh
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"   # Every Sunday at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Run refresh pipeline
+        env:
+          PYTHONPATH: .
+        run: python pipeline/refresh.py
+
+      - name: Commit updated database
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/music_theory.db
+          git diff --cached --quiet || git commit -m "chore: weekly data refresh [skip ci]"
+          git push
