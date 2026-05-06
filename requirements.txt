@@ -36,6 +36,8 @@ pyee==13.0.1
 Pygments==2.20.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
+python-Levenshtein==0.27.1
+thefuzz==0.22.1
 PyYAML==6.0.3
 rake-nltk==1.0.6
 regex==2026.4.4
