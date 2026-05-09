@@ -76,6 +76,12 @@
       </div>
     </div>
     <div class="filter-stats" id="filter-stats" aria-live="polite"></div>
+    <button class="trends-toggle-btn" id="trends-toggle" aria-pressed="false" title="View keyword trends over time">
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" width="13" height="13">
+        <polyline points="1,12 5,7 8,9 12,3 15,5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Trends
+    </button>
   </div>
 
   <!-- ═══════════════════════════════════════════ CLOUD ══ -->
@@ -104,6 +110,9 @@
 
     <!-- Tooltip shown on hover -->
     <div class="kw-tooltip" id="kw-tooltip" role="tooltip" aria-hidden="true"></div>
+
+    <!-- Trends panel (replaces cloud when active) -->
+    <div id="trends-panel" class="trends-panel" hidden aria-label="Keyword trends"></div>
   </main>
 
   <!-- ═══════════════════════════════════════════ DRAWER ══ -->
@@ -120,6 +129,8 @@
         <span class="drawer-badge" id="drawer-count"></span>
       </div>
       <div class="drawer-meta" id="drawer-meta"></div>
+      <div class="drawer-sparkline" id="drawer-sparkline" aria-hidden="true"></div>
+      <div class="drawer-related" id="drawer-related" hidden></div>
       <button class="drawer-close" id="drawer-close" aria-label="Close panel">
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M2 2L14 14M14 2L2 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -237,6 +248,6 @@
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1/build/d3.layout.cloud.js"></script>
   <script>window.STATIC_DATA_URL="data/data.json";</script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
