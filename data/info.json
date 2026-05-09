@@ -1,0 +1,124 @@
+{
+  "stats": {
+    "articles": 8883,
+    "books": 1399,
+    "chapters": 0,
+    "journals": 12,
+    "publishers": 27,
+    "keywords": 12418,
+    "year_min": 1954,
+    "year_max": 2027
+  },
+  "journals": [
+    {
+      "name": "Perspectives of New Music",
+      "count": 1536
+    },
+    {
+      "name": "Music Perception",
+      "count": 1455
+    },
+    {
+      "name": "Music Theory Spectrum",
+      "count": 1326
+    },
+    {
+      "name": "Journal of Music Theory",
+      "count": 1159
+    },
+    {
+      "name": "Journal of the Society for American Music",
+      "count": 1035
+    },
+    {
+      "name": "Music Theory Online",
+      "count": 968
+    },
+    {
+      "name": "Music Analysis",
+      "count": 856
+    },
+    {
+      "name": "Music Perception: An Interdisciplinary Journal",
+      "count": 235
+    },
+    {
+      "name": "Music Theory and Analysis (MTA)",
+      "count": 137
+    },
+    {
+      "name": "Analytical Approaches to World Music",
+      "count": 104
+    },
+    {
+      "name": "SMT-V: Society for Music Theory Videocast Journal",
+      "count": 50
+    },
+    {
+      "name": "Theory and Practice",
+      "count": 22
+    }
+  ],
+  "publishers": [
+    {
+      "name": "Cambridge University Press",
+      "count": 1197
+    },
+    {
+      "name": "University of Michigan Press",
+      "count": 23
+    },
+    {
+      "name": "Routledge",
+      "count": 21
+    },
+    {
+      "name": "MIT Press",
+      "count": 20
+    },
+    {
+      "name": "Oxford University Press",
+      "count": 19
+    },
+    {
+      "name": "University of Chicago Press",
+      "count": 16
+    },
+    {
+      "name": "Univ of California Press",
+      "count": 14
+    },
+    {
+      "name": "Princeton University Press",
+      "count": 14
+    },
+    {
+      "name": "W. W. Norton",
+      "count": 13
+    },
+    {
+      "name": "Oxford University Press, USA",
+      "count": 11
+    },
+    {
+      "name": "Cornell University Press",
+      "count": 11
+    },
+    {
+      "name": "Yale University Press",
+      "count": 8
+    },
+    {
+      "name": "University Rochester Press",
+      "count": 8
+    },
+    {
+      "name": "University of California Press",
+      "count": 3
+    },
+    {
+      "name": "OUP Oxford",
+      "count": 3
+    }
+  ]
+}
