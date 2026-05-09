@@ -98,18 +98,22 @@ const state = {
   type:     '',
   keywords: [],
   stats:    null,
+  view:     'cloud',   // 'cloud' | 'trends'
 };
 
 // Drawer state — reset each time drawer opens
 const ds = {
-  mode:        'keyword',  // 'keyword' | 'search'
-  allItems:    [],
-  filtered:    [],
-  tab:         'articles', // 'articles' | 'books'
-  page:        0,
-  sortBy:      'date-desc',
-  searchTerms: [],
-  kwText:      '',
+  mode:         'keyword',  // 'keyword' | 'search'
+  allItems:     [],
+  filtered:     [],
+  tab:          'articles', // 'articles' | 'books'
+  page:         0,
+  sortBy:       'date-desc',
+  searchTerms:  [],
+  kwText:       '',
+  primaryKwId:  null,   // ID of the keyword whose drawer is open
+  filterKwId:   null,   // secondary keyword for intersection filter
+  filterKwText: '',
 };
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -170,7 +174,8 @@ let _sd = null; // cached static dataset
 
 async function ensureStaticData() {
   if (_sd) return _sd;
-  const r = await fetch(window.STATIC_DATA_URL);
+  const url = window.STATIC_DATA_URL || 'data/data.json';
+  const r = await fetch(url);
   if (!r.ok) throw new Error(`Failed to load static data: ${r.status}`);
   const raw = await r.json();
 
@@ -188,6 +193,19 @@ async function ensureStaticData() {
       (raw._byKwId[kid] = raw._byKwId[kid] || []).push(item);
     }
   }
+
+  // Build Map-based indices for byYear and cooccur
+  raw._byYear  = new Map();
+  raw._cooccur = new Map();
+  for (const [kid, pairs] of Object.entries(raw.byYear  || {})) {
+    const m = new Map();
+    for (const [y, c] of pairs) m.set(y, c);
+    raw._byYear.set(Number(kid), m);
+  }
+  for (const [kid, pairs] of Object.entries(raw.cooccur || {})) {
+    raw._cooccur.set(Number(kid), pairs);   // [[peerId, count], ...]
+  }
+
   _sd = raw;
   return _sd;
 }
@@ -445,6 +463,350 @@ function clearCloud() {
   if (cloudSvg) cloudSvg.selectAll('*').remove();
 }
 
+// ── Drawer sparkline ──────────────────────────────────────────────────────────
+
+function renderSparkline(kwId) {
+  drawerSparkline.innerHTML = '';
+  if (!_sd?._byYear) return;
+  const yearMap = _sd._byYear.get(kwId);
+  if (!yearMap) return;
+
+  const DECADES = [
+    ['pre-1980', 0,    1979],
+    ["'80s",     1980, 1989],
+    ["'90s",     1990, 1999],
+    ["'00s",     2000, 2009],
+    ["'10s",     2010, 2019],
+    ["'20s",     2020, 2029],
+  ];
+
+  const data = DECADES.map(([label, lo, hi]) => {
+    let total = 0;
+    for (const [y, c] of yearMap) { if (y >= lo && y <= hi) total += c; }
+    return { label, total };
+  });
+
+  const maxVal = Math.max(1, ...data.map(d => d.total));
+  const color  = baseColor(_sd._kwById[kwId]?.keyword || '');
+
+  const W = drawerSparkline.clientWidth || 340;
+  const H = 72, mb = 20, mt = 6, ml = 4, mr = 4;
+  const iW = W - ml - mr, iH = H - mt - mb;
+
+  const xSc = d3.scaleBand().domain(data.map(d => d.label)).range([0, iW]).padding(0.22);
+  const ySc = d3.scaleLinear().domain([0, maxVal]).range([iH, 0]);
+
+  const svg = d3.select(drawerSparkline).append('svg')
+    .attr('width', W).attr('height', H).attr('class', 'sparkline-svg');
+  const g = svg.append('g').attr('transform', `translate(${ml},${mt})`);
+
+  // Bars
+  g.selectAll('rect').data(data).enter().append('rect')
+    .attr('x',      d => xSc(d.label))
+    .attr('y',      d => ySc(d.total))
+    .attr('width',  xSc.bandwidth())
+    .attr('height', d => iH - ySc(d.total))
+    .attr('fill',   d => d.total > 0 ? color : '#d8d8d8')
+    .attr('rx', 2);
+
+  // Count labels on bars with enough height
+  g.selectAll('text.bar-val').data(data).enter().append('text')
+    .attr('class', 'bar-val')
+    .attr('x', d => xSc(d.label) + xSc.bandwidth() / 2)
+    .attr('y', d => ySc(d.total) - 3)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#555')
+    .attr('font-size', '9px')
+    .text(d => d.total > 0 ? d.total : '');
+
+  // Decade labels
+  g.selectAll('text.dec-label').data(data).enter().append('text')
+    .attr('class', 'dec-label')
+    .attr('x', d => xSc(d.label) + xSc.bandwidth() / 2)
+    .attr('y', iH + 14)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#999')
+    .attr('font-size', '9.5px')
+    .text(d => d.label);
+}
+
+// ── Related keywords chips ────────────────────────────────────────────────────
+
+function renderRelatedChips(kwId) {
+  drawerRelated.innerHTML = '';
+  drawerRelated.hidden = true;
+  if (!_sd?._cooccur) return;
+  const peers = _sd._cooccur.get(kwId);
+  if (!peers || !peers.length) return;
+
+  const top = peers.slice(0, 10);
+  const label = document.createElement('span');
+  label.className = 'related-label';
+  label.textContent = 'Often paired with:';
+  drawerRelated.appendChild(label);
+
+  top.forEach(([peerId, count]) => {
+    const kw = _sd._kwById[peerId];
+    if (!kw) return;
+    const isActive = ds.filterKwId === peerId;
+    const chip = document.createElement('button');
+    chip.className = 'related-chip' + (isActive ? ' active' : '');
+    chip.title = isActive
+      ? 'Click to remove intersection filter'
+      : `${count} items in common — click to filter to both`;
+    chip.dataset.kwId = String(peerId);
+    chip.style.setProperty('--chip-color', baseColor(kw.keyword));
+    chip.innerHTML = `<span class="chip-dot"></span>${escapeHtml(kw.keyword)}`;
+    chip.addEventListener('click', () => {
+      if (ds.filterKwId === peerId) {
+        ds.filterKwId   = null;
+        ds.filterKwText = '';
+      } else {
+        ds.filterKwId   = peerId;
+        ds.filterKwText = kw.keyword;
+      }
+      renderRelatedChips(kwId);
+      ds.page = 0;
+      applyDrawerFilter();
+    });
+    drawerRelated.appendChild(chip);
+  });
+
+  drawerRelated.hidden = false;
+}
+
+// ── Trends view ───────────────────────────────────────────────────────────────
+
+const TREND_COLORS = [
+  '#2563eb','#dc2626','#16a34a','#d97706','#7c3aed',
+  '#0891b2','#db2777','#65a30d','#ea580c','#0d9488',
+];
+
+const trendsState = {
+  active: new Map(),   // kwId → { keyword, color, yearMap }
+  colorIdx: 0,
+  chart: null,
+};
+
+function setView(view) {
+  state.view = view;
+  const isCloud = view === 'cloud';
+
+  trendsToggleBtn.setAttribute('aria-pressed', String(!isCloud));
+  trendsToggleBtn.classList.toggle('active', !isCloud);
+
+  // Show/hide cloud elements
+  cloudOverlay.style.display  = isCloud ? '' : 'none';
+  cloudHint.hidden            = !isCloud;
+  document.getElementById('cloud-legend').hidden = !isCloud;
+  if (cloudSvg) cloudSvg.node().style.display = isCloud ? '' : 'none';
+
+  // Show/hide trends panel
+  trendsPanel.hidden = isCloud;
+
+  if (!isCloud) {
+    initTrendsPanel();
+  }
+}
+
+async function addToTrends(kwId, keyword) {
+  if (trendsState.active.has(kwId)) return;
+  let yearMap = new Map();
+  try {
+    const sd = await ensureStaticData();
+    yearMap = sd._byYear.get(kwId) || new Map();
+  } catch { /* proceed without trend data */ }
+  const color = TREND_COLORS[trendsState.colorIdx % TREND_COLORS.length];
+  trendsState.colorIdx++;
+  trendsState.active.set(kwId, { kwId, keyword, color, yearMap });
+  renderTrendsLegend();
+  renderTrendsChart();
+}
+
+function removeFromTrends(kwId) {
+  trendsState.active.delete(kwId);
+  renderTrendsLegend();
+  renderTrendsChart();
+}
+
+function initTrendsPanel() {
+  if (trendsPanel.dataset.initialized) return;
+  trendsPanel.dataset.initialized = '1';
+
+  trendsPanel.innerHTML = `
+    <div class="trends-header">
+      <div class="trends-header-top">
+        <h2 class="trends-title">Keyword Trends</h2>
+        <p class="trends-sub">Frequency of each keyword across the corpus by year</p>
+      </div>
+      <div class="trends-selector-wrap">
+        <div class="trends-search-field">
+          <svg viewBox="0 0 20 20" fill="none" width="14" height="14" aria-hidden="true">
+            <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M13 13L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input id="trends-search" type="search" placeholder="Add keyword to compare…"
+                 autocomplete="off" spellcheck="false" class="trends-search-input"/>
+        </div>
+        <div id="trends-suggestions" class="trends-suggestions" hidden></div>
+      </div>
+      <div id="trends-legend" class="trends-legend"></div>
+    </div>
+    <div id="trends-chart-area" class="trends-chart-area"></div>
+  `;
+
+  // Wire search
+  const searchEl = document.getElementById('trends-search');
+  const suggEl   = document.getElementById('trends-suggestions');
+
+  searchEl.addEventListener('input', debounce(() => {
+    const q = searchEl.value.trim().toLowerCase();
+    if (!q || !_sd) { suggEl.hidden = true; return; }
+    const matches = _sd.keywords
+      .filter(k => k.cloud && k.keyword.toLowerCase().includes(q) && !trendsState.active.has(k.id))
+      .slice(0, 8);
+    if (!matches.length) { suggEl.hidden = true; return; }
+    suggEl.innerHTML = matches.map(k =>
+      `<button class="trends-sugg-item" data-id="${k.id}" data-kw="${escapeHtml(k.keyword)}">
+         ${escapeHtml(k.keyword)}
+       </button>`
+    ).join('');
+    suggEl.hidden = false;
+  }, 150));
+
+  suggEl.addEventListener('click', e => {
+    const btn = e.target.closest('.trends-sugg-item');
+    if (!btn) return;
+    addToTrends(Number(btn.dataset.id), btn.dataset.kw);
+    searchEl.value = '';
+    suggEl.hidden = true;
+    searchEl.focus();
+  });
+
+  document.addEventListener('click', e => {
+    if (!suggEl.contains(e.target) && e.target !== searchEl) suggEl.hidden = true;
+  }, { capture: true });
+}
+
+function renderTrendsLegend() {
+  const el = document.getElementById('trends-legend');
+  if (!el) return;
+  if (!trendsState.active.size) {
+    el.innerHTML = '<span class="trends-empty-hint">Search above or switch back to Cloud view and click keywords to add them here</span>';
+    return;
+  }
+  el.innerHTML = [...trendsState.active.values()].map(s =>
+    `<span class="trends-legend-item" data-id="${s.kwId}">
+       <span class="trends-legend-dot" style="background:${s.color}"></span>
+       ${escapeHtml(s.keyword)}
+       <button class="trends-legend-remove" aria-label="Remove ${escapeHtml(s.keyword)}">✕</button>
+     </span>`
+  ).join('');
+  el.querySelectorAll('.trends-legend-remove').forEach(btn => {
+    btn.addEventListener('click', () => removeFromTrends(Number(btn.closest('[data-id]').dataset.id)));
+  });
+}
+
+function renderTrendsChart() {
+  const area = document.getElementById('trends-chart-area');
+  if (!area) return;
+  area.innerHTML = '';
+
+  const series = [...trendsState.active.values()];
+
+  if (!series.length) {
+    area.innerHTML = '<div class="trends-no-data">Add keywords above to see trends</div>';
+    return;
+  }
+
+  // Collect all years across active keywords
+  const allYears = new Set();
+  series.forEach(s => { for (const [y] of s.yearMap) { if (y >= 1950) allYears.add(y); } });
+  const years = [...allYears].sort((a, b) => a - b);
+  if (!years.length) return;
+  const [yMin, yMax] = [years[0], years[years.length - 1]];
+
+  const margin = { top: 16, right: 24, bottom: 40, left: 44 };
+  const W = area.clientWidth  - margin.left - margin.right;
+  const H = area.clientHeight - margin.top  - margin.bottom;
+  if (W <= 0 || H <= 0) return;
+
+  const xSc = d3.scaleLinear().domain([yMin, yMax]).range([0, W]);
+  const maxCount = d3.max(series, s => d3.max([...s.yearMap.values()])) || 1;
+  const ySc = d3.scaleLinear().domain([0, maxCount]).nice().range([H, 0]);
+
+  const svg = d3.select(area).append('svg')
+    .attr('width',  W + margin.left + margin.right)
+    .attr('height', H + margin.top  + margin.bottom);
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // Grid lines
+  g.append('g').attr('class', 'trends-grid')
+    .call(d3.axisLeft(ySc).ticks(5).tickSize(-W).tickFormat(''))
+    .call(ax => ax.select('.domain').remove());
+
+  // Axes
+  g.append('g').attr('class', 'trends-axis')
+    .attr('transform', `translate(0,${H})`)
+    .call(d3.axisBottom(xSc).ticks(Math.min(10, yMax - yMin)).tickFormat(d3.format('d')));
+
+  g.append('g').attr('class', 'trends-axis')
+    .call(d3.axisLeft(ySc).ticks(5));
+
+  // Line generator — fill missing years with 0
+  const line = d3.line()
+    .x(d => xSc(d[0]))
+    .y(d => ySc(d[1]))
+    .curve(d3.curveMonotoneX);
+
+  // Draw lines
+  series.forEach(s => {
+    const pts = [];
+    for (let y = yMin; y <= yMax; y++) pts.push([y, s.yearMap.get(y) || 0]);
+    g.append('path')
+      .datum(pts)
+      .attr('fill', 'none')
+      .attr('stroke', s.color)
+      .attr('stroke-width', 2)
+      .attr('d', line);
+  });
+
+  // Hover interaction
+  const tooltip = d3.select(area).append('div').attr('class', 'trends-tooltip');
+  const crosshair = g.append('line')
+    .attr('class', 'trends-crosshair')
+    .attr('y1', 0).attr('y2', H)
+    .style('display', 'none');
+
+  g.append('rect')
+    .attr('width', W).attr('height', H)
+    .attr('fill', 'none').attr('pointer-events', 'all')
+    .on('mousemove', function(event) {
+      const [mx] = d3.pointer(event);
+      const yr = Math.round(xSc.invert(mx));
+      if (yr < yMin || yr > yMax) return;
+      crosshair.style('display', null)
+        .attr('x1', xSc(yr)).attr('x2', xSc(yr));
+      const rows = series
+        .map(s => ({ label: s.keyword, val: s.yearMap.get(yr) || 0, color: s.color }))
+        .sort((a, b) => b.val - a.val);
+      tooltip.style('display', 'block')
+        .style('left', `${Math.min(event.offsetX + 14, area.clientWidth - 160)}px`)
+        .style('top',  `${event.offsetY - 12}px`)
+        .html(`<div class="tt-year">${yr}</div>` +
+          rows.map(r => `<div class="tt-row">
+            <span class="tt-dot" style="background:${r.color}"></span>
+            <span class="tt-label">${escapeHtml(r.label)}</span>
+            <span class="tt-val">${r.val}</span>
+          </div>`).join(''));
+    })
+    .on('mouseleave', () => {
+      crosshair.style('display', 'none');
+      tooltip.style('display', 'none');
+    });
+}
+
 function drawCloud(words, W, H, layoutH = H, legendMask = null) {
   if (!cloudSvg) {
     cloudSvg = d3.select('#cloud-area')
@@ -502,7 +864,11 @@ function drawCloud(words, W, H, layoutH = H, legendMask = null) {
       })
       .on('click', function(event, d) {
         event.stopPropagation();
-        openKeywordDrawer(d);
+        if (state.view === 'trends') {
+          addToTrends(d.kw.id, d.text);
+        } else {
+          openKeywordDrawer(d);
+        }
       });
 }
 
@@ -599,6 +965,12 @@ function closeDrawer() {
   drawerSrchWrap.hidden = true;
   sortBar.hidden        = true;
   pagination.hidden     = true;
+  ds.filterKwId   = null;
+  ds.filterKwText = '';
+  ds.primaryKwId  = null;
+  drawerSparkline.innerHTML = '';
+  drawerRelated.innerHTML   = '';
+  drawerRelated.hidden      = true;
   if (cloudSvg) {
     cloudSvg.selectAll('text.cloud-word')
       .style('opacity', 1)
@@ -612,11 +984,14 @@ function closeDrawer() {
 
 async function openKeywordDrawer(d) {
   const kwText      = d.text;
-  ds.mode        = 'keyword';
-  ds.kwText      = kwText;
-  ds.searchTerms = [];
-  ds.tab         = 'articles';
-  ds.page        = 0;
+  ds.mode         = 'keyword';
+  ds.kwText       = kwText;
+  ds.searchTerms  = [];
+  ds.tab          = 'articles';
+  ds.page         = 0;
+  ds.primaryKwId  = null;
+  ds.filterKwId   = null;
+  ds.filterKwText = '';
   drawerSrchIn.value = '';
   setSortBtn('date-desc');
 
@@ -635,6 +1010,16 @@ async function openKeywordDrawer(d) {
     const items = await loadItems(kwText);
     ds.allItems = items;
     activateKeywordDrawerUI();
+
+    try {
+      const sd = await ensureStaticData();
+      const kwObj = d.kw || sd.keywords.find(k => k.keyword.toLowerCase() === kwText.toLowerCase());
+      if (kwObj) {
+        ds.primaryKwId = kwObj.id;
+        renderSparkline(kwObj.id);
+        renderRelatedChips(kwObj.id);
+      }
+    } catch { /* correlation data unavailable */ }
   } catch (err) {
     resultList.innerHTML =
       `<li class="result-error" role="listitem">Failed to load items: ${escapeHtml(err.message)}</li>`;
@@ -680,13 +1065,20 @@ function applyDrawerFilter() {
     ? ds.allItems.filter(i => i.item_type === 'book')
     : ds.allItems.filter(i => i.item_type !== 'book');
 
+  // Intersection filter: keep only items that also have the secondary keyword
+  let base = src;
+  if (ds.filterKwId && _sd) {
+    const peerIds = new Set((_sd._byKwId[ds.filterKwId] || []).map(i => i.id));
+    base = src.filter(i => peerIds.has(i.id));
+  }
+
   let filtered = q
-    ? src.filter(i =>
+    ? base.filter(i =>
         (i.title   || '').toLowerCase().includes(q) ||
         (i.authors || '').toLowerCase().includes(q) ||
         (i.journal || '').toLowerCase().includes(q)
       )
-    : src;
+    : base;
 
   ds.filtered = sortItems(filtered, ds.sortBy);
   ds.page = 0;
@@ -1071,7 +1463,11 @@ function closeModal() {
 const infoOverlay = document.getElementById('info-overlay');
 const infoClose   = document.getElementById('info-close');
 const infoLoading = document.getElementById('info-loading');
-const infoContent = document.getElementById('info-content');
+const infoContent     = document.getElementById('info-content');
+const drawerSparkline = document.getElementById('drawer-sparkline');
+const drawerRelated   = document.getElementById('drawer-related');
+const trendsPanel     = document.getElementById('trends-panel');
+const trendsToggleBtn = document.getElementById('trends-toggle');
 
 async function openInfo() {
   infoOverlay.classList.add('open');
@@ -1384,6 +1780,10 @@ modalOverlay.addEventListener('click', e => {
   if (e.target === modalOverlay) closeModal();
 });
 
+trendsToggleBtn.addEventListener('click', () => {
+  setView(state.view === 'cloud' ? 'trends' : 'cloud');
+});
+
 document.getElementById('info-btn').addEventListener('click', openInfo);
 infoClose.addEventListener('click', closeInfo);
 infoOverlay.addEventListener('click', e => { if (e.target === infoOverlay) closeInfo(); });
@@ -1399,7 +1799,10 @@ document.addEventListener('keydown', e => {
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => refreshCloud(), 250);
+  resizeTimer = setTimeout(() => {
+    if (state.view === 'trends') renderTrendsChart();
+    else refreshCloud();
+  }, 250);
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

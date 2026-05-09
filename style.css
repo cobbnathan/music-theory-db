@@ -1622,3 +1622,262 @@ mark {
   .filter-label { display: none; }
   .filter-stats { display: none; }
 }
+
+/* ── Trends toggle button ─────────────────────────────────────────────────── */
+.trends-toggle-btn {
+  display:      flex;
+  align-items:  center;
+  gap:          0.35rem;
+  margin-left:  auto;
+  padding:      0.25rem 0.75rem;
+  background:   transparent;
+  border:       1px solid var(--border-light);
+  border-radius: 999px;
+  color:        var(--text-muted);
+  font-size:    0.78rem;
+  font-family:  var(--font-sans);
+  cursor:       pointer;
+  transition:   background 0.15s, color 0.15s, border-color 0.15s;
+  white-space:  nowrap;
+  flex-shrink:  0;
+}
+.trends-toggle-btn:hover {
+  background:   var(--surface-2);
+  color:        var(--text);
+  border-color: var(--gold-dim);
+}
+.trends-toggle-btn.active,
+.trends-toggle-btn[aria-pressed="true"] {
+  background:   var(--gold-glow);
+  border-color: var(--gold);
+  color:        var(--gold-bright);
+}
+
+/* ── Drawer sparkline ─────────────────────────────────────────────────────── */
+.drawer-sparkline {
+  grid-column: 1 / -1;
+  padding: 0.5rem 1.25rem 0.25rem;
+  min-height: 80px;
+}
+.drawer-sparkline:empty { min-height: 0; padding: 0; }
+.sparkline-svg { display: block; overflow: visible; }
+
+/* ── Related keyword chips ────────────────────────────────────────────────── */
+.drawer-related {
+  grid-column: 1 / -1;
+  display:     flex;
+  flex-wrap:   wrap;
+  align-items: center;
+  gap:         0.35rem;
+  padding:     0.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--canvas-border);
+}
+.related-label {
+  font-size:  0.72rem;
+  color:      var(--canvas-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  margin-right: 0.15rem;
+}
+.related-chip {
+  display:      inline-flex;
+  align-items:  center;
+  gap:          0.25rem;
+  padding:      0.2rem 0.55rem 0.2rem 0.4rem;
+  background:   var(--canvas-2);
+  border:       1px solid var(--canvas-border);
+  border-radius: 999px;
+  font-size:    0.75rem;
+  color:        var(--canvas-text);
+  cursor:       pointer;
+  font-family:  var(--font-sans);
+  transition:   background 0.12s, border-color 0.12s;
+}
+.related-chip:hover {
+  background:   #e0e0e0;
+  border-color: var(--chip-color, #aaa);
+}
+.related-chip.active {
+  background:   var(--chip-color, #888);
+  border-color: var(--chip-color, #888);
+  color:        #fff;
+}
+.related-chip.active:hover {
+  filter: brightness(1.12);
+}
+.chip-dot {
+  width:         7px;
+  height:        7px;
+  border-radius: 50%;
+  background:    var(--chip-color, #888);
+  flex-shrink:   0;
+}
+.related-chip.active .chip-dot {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+/* ── Trends panel ─────────────────────────────────────────────────────────── */
+.trends-panel {
+  position: absolute;
+  inset:    0;
+  display:  flex;
+  flex-direction: column;
+  background: var(--canvas);
+  overflow: hidden;
+  z-index: 2;
+}
+.trends-panel[hidden] { display: none; }
+
+.trends-header {
+  flex-shrink: 0;
+  padding: 1rem 1.5rem 0.75rem;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--canvas-border);
+}
+.trends-header-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+.trends-title {
+  font-family: var(--font-serif);
+  font-size:   1.1rem;
+  font-weight: 600;
+  color:       var(--canvas-text);
+}
+.trends-sub {
+  font-size: 0.78rem;
+  color:     var(--canvas-muted);
+}
+.trends-selector-wrap {
+  position: relative;
+  max-width: 360px;
+  margin-bottom: 0.65rem;
+}
+.trends-search-field {
+  display:     flex;
+  align-items: center;
+  gap:         0.5rem;
+  padding:     0.35rem 0.75rem;
+  background:  #fff;
+  border:      1px solid var(--canvas-border);
+  border-radius: 999px;
+  color:       var(--canvas-muted);
+}
+.trends-search-input {
+  flex:        1;
+  border:      none;
+  outline:     none;
+  background:  transparent;
+  font-size:   0.85rem;
+  color:       var(--canvas-text);
+  font-family: var(--font-sans);
+}
+.trends-suggestions {
+  position:   absolute;
+  top:        calc(100% + 4px);
+  left:       0;
+  right:      0;
+  background: #fff;
+  border:     1px solid var(--canvas-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  z-index:    10;
+  overflow:   hidden;
+}
+.trends-sugg-item {
+  display:    block;
+  width:      100%;
+  text-align: left;
+  padding:    0.5rem 0.9rem;
+  font-size:  0.83rem;
+  color:      var(--canvas-text);
+  background: transparent;
+  border:     none;
+  cursor:     pointer;
+  font-family: var(--font-sans);
+}
+.trends-sugg-item:hover { background: var(--canvas-2); }
+
+.trends-legend {
+  display:     flex;
+  flex-wrap:   wrap;
+  align-items: center;
+  gap:         0.5rem;
+  min-height:  24px;
+}
+.trends-empty-hint {
+  font-size: 0.78rem;
+  color:     var(--canvas-muted);
+  font-style: italic;
+}
+.trends-legend-item {
+  display:      inline-flex;
+  align-items:  center;
+  gap:          0.35rem;
+  padding:      0.2rem 0.6rem 0.2rem 0.45rem;
+  background:   var(--canvas-2);
+  border:       1px solid var(--canvas-border);
+  border-radius: 999px;
+  font-size:    0.78rem;
+  color:        var(--canvas-text);
+}
+.trends-legend-dot {
+  width:         8px;
+  height:        8px;
+  border-radius: 50%;
+  flex-shrink:   0;
+}
+.trends-legend-remove {
+  background:  transparent;
+  border:      none;
+  cursor:      pointer;
+  font-size:   0.7rem;
+  color:       var(--canvas-muted);
+  padding:     0 0 0 0.2rem;
+  line-height: 1;
+}
+.trends-legend-remove:hover { color: var(--canvas-text); }
+
+.trends-chart-area {
+  flex:     1;
+  position: relative;
+  overflow: hidden;
+  padding:  0.25rem 0.5rem 0.25rem 0;
+}
+.trends-no-data {
+  position:   absolute;
+  inset:      0;
+  display:    flex;
+  align-items: center;
+  justify-content: center;
+  font-size:  0.9rem;
+  color:      var(--canvas-muted);
+  font-style: italic;
+}
+.trends-axis text  { fill: var(--canvas-muted); font-size: 11px; }
+.trends-axis path,
+.trends-axis line  { stroke: var(--canvas-border); }
+.trends-grid line  { stroke: var(--canvas-border); stroke-dasharray: 3,3; }
+.trends-grid .domain { display: none; }
+.trends-crosshair  { stroke: #aaa; stroke-width: 1; stroke-dasharray: 4,3; pointer-events: none; }
+
+.trends-tooltip {
+  position:   absolute;
+  display:    none;
+  background: rgba(255,255,255,0.96);
+  border:     1px solid var(--canvas-border);
+  border-radius: 8px;
+  padding:    0.5rem 0.75rem;
+  font-size:  0.78rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  pointer-events: none;
+  z-index:    10;
+  min-width:  130px;
+}
+.tt-year  { font-weight: 600; color: var(--canvas-text); margin-bottom: 0.3rem; }
+.tt-row   { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; }
+.tt-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tt-label { flex: 1; color: var(--canvas-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+.tt-val   { font-weight: 600; color: var(--canvas-text); }
