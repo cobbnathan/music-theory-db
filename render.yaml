@@ -2,8 +2,17 @@ services:
   - type: web
     name: music-theory-db
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn api.app:app
+    plan: free
+    buildCommand: bash build.sh
+    startCommand: gunicorn api.app:app --workers 2 --timeout 120
+    disk:
+      name: db-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: "3.12"
+      - key: DATABASE_PATH
+        value: /data/music_theory.db
+      - key: GOOGLE_BOOKS_API_KEY
+        sync: false   # set manually in Render dashboard → Environment
