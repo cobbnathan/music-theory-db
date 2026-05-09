@@ -68,6 +68,7 @@ body {
   font-family: var(--font-sans);
   font-size:   0.9375rem;
   line-height: 1.5;
+  height:      100vh;
   height:      100dvh;
   overflow:    hidden;
   display:     flex;
@@ -324,9 +325,10 @@ body {
 
 /* ── Cloud area — off-white canvas ───────────────────────────────────────── */
 .cloud-area {
-  flex:     1;
-  position: relative;
-  overflow: hidden;
+  flex:       1;
+  min-height: 400px;
+  position:   relative;
+  overflow:   hidden;
   background: radial-gradient(
     ellipse 90% 80% at 50% 45%,
     #fafafa 0%,

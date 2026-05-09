@@ -1177,13 +1177,18 @@ function renderInfoContent(stats, sources) {
           Article metadata is retrieved from the
           <a class="info-link" href="https://www.crossref.org/" target="_blank" rel="noopener">CrossRef API</a>
           using each journal's ISSN, which provides titles, authors, DOIs, years, volumes, and—where
-          available—abstracts. Book records are supplemented via the
+          available—abstracts. Book records come from two sources: Cambridge University Press titles
+          are harvested directly from the
+          <a class="info-link" href="https://www.cambridge.org/core/browse-subjects/music" target="_blank" rel="noopener">Cambridge Core</a>
+          music catalogue; books from Oxford University Press, MIT Press, Routledge, W.&nbsp;W.&nbsp;Norton,
+          Princeton, Yale, Chicago, Michigan, California, Cornell, Rochester, and Duke University Presses
+          are retrieved via the
           <a class="info-link" href="https://developers.google.com/books" target="_blank" rel="noopener">Google Books API</a>
-          and <a class="info-link" href="https://openlibrary.org/developers" target="_blank" rel="noopener">Open Library</a>,
-          and individual publishers' catalogues are scraped for chapter-level detail.
-          Coverage depends on what publishers have registered with CrossRef; some journals
-          (notably <em>Perspectives of New Music</em>) have incomplete abstract and post-2020 coverage
-          in CrossRef's records.
+          using subject-filtered searches, with cover images supplemented from
+          <a class="info-link" href="https://openlibrary.org/developers" target="_blank" rel="noopener">Open Library</a>.
+          Coverage depends on what publishers have registered with CrossRef and Google Books;
+          some journals (notably <em>Perspectives of New Music</em>) have incomplete abstract
+          and post-2020 coverage in CrossRef's records.
         </p>
       </div>
 
