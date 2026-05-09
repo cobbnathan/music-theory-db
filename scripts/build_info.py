@@ -45,8 +45,12 @@ def main() -> None:
         "year_max":   row["year_max"],
     }
 
-    # Top journals by article/chapter count
-    journals = conn.execute("""
+    # Canonical journal name map — normalises variant titles
+    _CANONICAL_JOURNAL: dict[str, str] = {
+        "Music Perception: An Interdisciplinary Journal": "Music Perception",
+    }
+
+    raw_journals = conn.execute("""
         SELECT TRIM(journal) AS name, COUNT(*) AS count
         FROM items
         WHERE item_type IN ('article', 'chapter')
@@ -55,6 +59,14 @@ def main() -> None:
         ORDER BY count DESC
         LIMIT 30
     """).fetchall()
+
+    journal_counts: dict[str, int] = {}
+    for r in raw_journals:
+        canonical = _CANONICAL_JOURNAL.get(r["name"], r["name"])
+        journal_counts[canonical] = journal_counts.get(canonical, 0) + r["count"]
+
+    journals_sorted = sorted(journal_counts.items(), key=lambda x: -x[1])
+    journals = [{"name": n, "count": c} for n, c in journals_sorted]
 
     # Canonical publisher name map — normalises variant spellings from Google Books
     _CANONICAL: dict[str, str] = {
@@ -92,7 +104,7 @@ def main() -> None:
 
     payload = {
         "stats":      stats,
-        "journals":   [dict(r) for r in journals],
+        "journals":   journals,
         "publishers": publishers,
     }
 
