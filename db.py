@@ -156,6 +156,8 @@ def upsert_item(db: sqlite_utils.Database, record: dict) -> int:
     if existing_id is not None:
         r["id"] = existing_id
         r["scraped_at"] = datetime.now(timezone.utc).isoformat()
+        # Preserve chapters_available — it's set by a separate step after ToC parsing
+        r.pop("chapters_available", None)
         db["items"].update(existing_id, r)
         return existing_id
 

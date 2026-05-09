@@ -28,34 +28,159 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Music-theory domain vocabulary used as pre-scored candidates
 # ---------------------------------------------------------------------------
+# Organised by domain; the flat list is what KeyBERT uses.
 
-DOMAIN_TERMS: list[str] = [
-    "voice leading",
-    "counterpoint",
-    "harmony",
-    "form",
-    "rhythm",
-    "meter",
-    "timbre",
-    "Schenkerian analysis",
-    "post-tonal",
-    "serialism",
-    "modality",
-    "tonality",
-    "improvisation",
-    "performance",
-    "cognition",
-    "perception",
-    "semiotics",
-    "neo-Riemannian",
-    "transformational theory",
-    "spectralism",
-    "microtonality",
-]
+DOMAIN_BY_CATEGORY: dict[str, list[str]] = {
+    "pitch_and_harmony": [
+        "pitch class", "pitch-class set theory", "pitch space", "pitch proximity",
+        "interval class", "interval vector", "prime form", "normal form", "set class",
+        "trichord", "tetrachord", "hexachord", "aggregate", "chromaticism", "diatonicism",
+        "modality", "tonality", "atonality", "pantonality", "extended tonality",
+        "harmonic function", "harmonic rhythm", "chord grammar", "chord progression",
+        "voice leading", "voice exchange", "parallel motion", "contrary motion",
+        "oblique motion", "doubling", "part writing", "functional harmony",
+        "non-functional harmony", "planing", "harmonic ambiguity", "harmonic prolongation",
+        "harmonic substitution", "secondary dominant", "borrowed chord", "mixture",
+        "enharmonic reinterpretation", "pivot chord", "modulation", "tonicization",
+        "tonal center", "tonic", "dominant", "subdominant", "leading tone",
+        "common-tone modulation",
+    ],
+    "counterpoint_and_voice_leading": [
+        "counterpoint", "species counterpoint", "first species", "second species",
+        "third species", "fourth species", "fifth species", "free counterpoint",
+        "invertible counterpoint", "double counterpoint", "imitation", "canon", "fugue",
+        "fugal exposition", "stretto", "augmentation", "diminution", "inversion",
+        "retrograde", "retrograde inversion", "cantus firmus", "suspension",
+        "passing tone", "neighbor tone", "appoggiatura", "escape tone", "anticipation",
+        "pedal point", "voice crossing", "voice overlap",
+    ],
+    "serialism_and_post_tonal": [
+        "twelve-tone technique", "tone row", "row class", "row form", "row matrix",
+        "combinatoriality", "hexachordal combinatoriality", "invariance", "segmentation",
+        "serialism", "integral serialism", "total serialism", "post-tonal theory",
+        "atonal voice leading", "transpositional symmetry", "inversional symmetry",
+        "Z-relation", "complement relation", "all-interval set", "all-combinatorial set",
+    ],
+    "form_and_structure": [
+        "musical form", "sonata form", "sonata theory", "exposition", "development",
+        "recapitulation", "coda", "transition", "medial caesura",
+        "essential expositional closure", "binary form", "ternary form", "rondo",
+        "variation form", "theme and variations", "strophic form", "through-composed",
+        "sectional form", "continuous form", "rotational form", "arch form",
+        "sentence", "period", "phrase", "phrase rhythm", "hypermeter",
+        "formal function", "loose-knit", "tight-knit",
+    ],
+    "schenkerian_analysis": [
+        "Schenkerian analysis", "Ursatz", "Urlinie", "Bassbrechung", "Stufe",
+        "scale degree", "structural level", "foreground", "middleground", "background",
+        "prolongation", "arpeggiation", "linear progression", "voice leading graph",
+        "reduction", "interruption", "initial ascent", "cover tone", "inner voice",
+        "obligatory register",
+    ],
+    "rhythm_and_meter": [
+        "meter", "hypermeter", "metric hierarchy", "metric dissonance", "metric ambiguity",
+        "syncopation", "hemiola", "polyrhythm", "polymeter", "isorhythm", "rhythm",
+        "rhythmic grouping", "rhythmic reduction", "beat", "pulse", "tactus", "tempo",
+        "rubato", "groove", "swing", "additive rhythm", "divisive rhythm", "aksak",
+        "cross-rhythm", "rhythmic hierarchy",
+    ],
+    "neo_riemannian_and_transformational": [
+        "Neo-Riemannian theory", "transformational theory", "Tonnetz",
+        "parsimonious voice leading", "triadic transformation", "Leittonwechsel",
+        "parallel transformation", "relative transformation", "hexatonic system",
+        "octatonic system", "diatonic system", "PLR group", "contextual inversion",
+        "commutative group", "generalized interval system", "network analysis",
+        "arrow graph", "spatial music theory",
+    ],
+    "timbre_texture_orchestration": [
+        "timbre", "orchestration", "instrumentation", "texture", "monophony",
+        "homophony", "polyphony", "heterophony", "density", "register", "range",
+        "spectral music theory", "spectralism", "acoustic ecology", "electroacoustic music",
+        "sound mass", "microtonality", "extended techniques", "noise music",
+    ],
+    "cognition_perception_psychology": [
+        "music cognition", "music perception", "music psychology", "auditory scene analysis",
+        "auditory streaming", "grouping", "expectation", "surprise", "tension and release",
+        "tonal hierarchy", "probe tone method", "key-finding", "melodic contour",
+        "melodic accent", "musical memory", "absolute pitch", "relative pitch",
+        "embodied cognition", "enactivism", "empirical musicology",
+    ],
+    "subfields_and_methodology": [
+        "corpus analysis", "computational musicology", "music and language",
+        "music and meaning", "music and gesture", "music and narrative", "topic theory",
+        "hermeneutics", "phenomenology", "semiotics", "music and emotion",
+        "music and embodiment", "performance analysis", "performance theory",
+        "historically informed performance", "improvisation", "jazz theory", "jazz harmony",
+        "blues", "popular music theory", "rock music analysis", "film music",
+        "hip-hop", "public music theory", "cold war",
+        "music and film", "leitmotif", "underscore", "diegetic music", "ethnomusicology",
+        "world music theory", "non-Western music theory", "just intonation",
+        "equal temperament", "tuning systems", "music and politics", "music and gender",
+        "feminist music theory", "queer music theory", "critical race theory in music",
+        "disability studies in music", "ecomusicology", "music and technology",
+        "electronic music", "algorithmic composition", "generative music",
+        "music information retrieval", "digital musicology", "music and mathematics",
+        "music and philosophy", "analytical philosophy of music", "music ontology",
+        "music and theology", "church modes", "plainchant", "medieval music theory",
+        "Renaissance music theory", "Baroque music theory", "Classical music theory",
+        "Romantic music theory", "twentieth-century music theory",
+        "contemporary music theory", "post-colonial music theory", "global music theory",
+    ],
+    "historical_theorist_traditions": [
+        "Rameauian theory", "basse fondamentale", "fundamental bass", "corps sonore",
+        "Fuxian counterpoint", "Riemannian theory", "harmonic dualism", "Klang",
+        "Schoenbergian theory", "developing variation", "musical idea", "Schenkerian theory",
+        "organic unity", "Reti motivic analysis", "thematic process", "Reti transformation",
+        "Meyer expectation theory", "implication-realization model", "gap-fill",
+        "Lerdahl-Jackendoff theory", "generative theory of tonal music", "preference rules",
+        "well-formedness rules", "metrical accent", "phenomenal accent", "structural accent",
+        "Narmourian theory", "registral direction", "intervallic difference",
+        "registral return", "proximity", "closure", "Lewinean theory", "interval function",
+        "IFUNC", "transformation network", "Forte set theory", "Forte name",
+        "similarity relations", "Kostka-Payne theory", "diatonic harmony",
+        "Aldwell-Schachter theory", "Caplin formal theory", "Hepokoski-Darcy sonata theory",
+        "dialogic form", "Rothstein phrase rhythm", "Cohn hexatonic theory",
+        "Tymoczko voice-leading geometry", "voice-leading space", "chord geometry",
+        "Huron expectation theory", "ITPRA theory", "sweet anticipation",
+        "Gjerdingen schema theory", "galant schemata", "Romanesca", "Monte", "Fonte",
+        "Meyer schema", "Do-Re-Mi schema", "Prinner", "Piston orchestration theory",
+        "Adorno music sociology", "negative dialectics in music", "Dahlhaus historicism",
+        "McClary feminist musicology", "Kerman new musicology", "Cook music and meaning",
+        "Tagg popular music analysis", "Nettl ethnomusicological theory", "Agawu topic theory",
+        "Hatten musical troping", "Ratner topic theory", "Tarasti musical semiotics",
+        "Nattiez semiology", "Ruwet paradigmatic analysis", "London meter theory",
+        "Hasty meter as rhythm", "Krebs metric dissonance theory",
+        "Temperley probabilistic theory", "Tonal pitch space", "Lerdahl tonal tension",
+    ],
+}
 
+# Flat list for KeyBERT candidate scoring
+DOMAIN_TERMS: list[str] = [t for terms in DOMAIN_BY_CATEGORY.values() for t in terms]
 _DOMAIN_LOWER = [t.lower() for t in DOMAIN_TERMS]
 
-# Minimum cosine similarity to include a keyword
+# Keyword → domain name (lowercase), for cloud color-coding
+KEYWORD_DOMAIN: dict[str, str] = {
+    t.lower(): cat
+    for cat, terms in DOMAIN_BY_CATEGORY.items()
+    for t in terms
+}
+
+# Domain → CSS color token
+DOMAIN_COLOR: dict[str, str] = {
+    "pitch_and_harmony":                "gold",
+    "neo_riemannian_and_transformational": "gold",
+    "rhythm_and_meter":                 "blue",
+    "form_and_structure":               "green",
+    "schenkerian_analysis":             "green",
+    "timbre_texture_orchestration":     "red",
+    "cognition_perception_psychology":  "purple",
+    "subfields_and_methodology":        "purple",
+    "historical_theorist_traditions":   "purple",
+    "counterpoint_and_voice_leading":   "grey",
+    "serialism_and_post_tonal":         "grey",
+}
+
+# Minimum cosine similarity to include a keyword from the domain pass
 _THRESHOLD = 0.25
 
 # ---------------------------------------------------------------------------
@@ -90,13 +215,159 @@ ABBREVIATION_MAP: dict[str, str] = {
     # Spectral / microtonal
     "spectral":                 "spectralism",
     "microtonal":               "microtonality",
+    # Twelve-tone / serial variants → canonical domain term
+    "twelve":                   "twelve-tone technique",
+    "twelve tone":              "twelve-tone technique",
+    "twelve note":              "twelve-tone technique",
+    "twelve-note":              "twelve-tone technique",
+    "twelve-note technique":    "twelve-tone technique",
+    "twelve-note row":          "twelve-tone technique",
+    "twelve tone technique":    "twelve-tone technique",
+    # Form variants
+    "formal":                   "form",
+    # Analysis variants → music analysis
+    "analytical":               "music analysis",
+    "analytic":                 "music analysis",
+    "analysing":                "music analysis",
+    "analyses":                 "music analysis",
+    # Hip-hop
+    "hip":                      "hip-hop",
+    "hip hop":                  "hip-hop",
+    # Ordinal century adjectives → compound forms
+    "sixteenth":                "sixteenth century",
+    "seventeenth":              "seventeenth century",
+    "eighteenth":               "eighteenth century",
+    "nineteenth":               "nineteenth century",
+    "twentieth":                "twentieth century",
+    "twenty-first":             "twenty-first century",
 }
 
 # Stand-alone keywords with no analytical specificity.
 # A keyword is removed only when its full text equals one of these strings
 # (compound terms like "music theory" or "harmonic analysis" are kept).
-STOP_KEYWORDS: frozenset[str] = frozenset(
-    ["music", "musical", "theory", "analysis"]
+STOP_KEYWORDS: frozenset[str] = frozenset([
+    "music", "musical", "theory", "analysis",
+    # Front/back matter artefacts from title-based extraction
+    "matter", "cover", "issue", "volume", "contributors", "information",
+    "cover matter", "issue cover", "issue cover matter",
+    "sam", "sam volume", "sam volume issue",
+    "volume issue", "volume issue cover",
+    # Table-of-contents / letter / intro artefacts
+    "contents", "table", "table contents", "letter", "introduction",
+    "volume 16 issue", "volume 17 issue", "volume 18 issue",
+    "16 issue cover", "17 issue cover", "18 issue cover",
+    "sam volume 16", "sam volume 17", "sam volume 18",
+    # Generic words that surface from short titles/abstracts with no specificity
+    "response", "time", "century", "language", "editor", "year", "number",
+    "example", "point", "way", "kind", "type", "level", "place", "use",
+    "approach", "question", "idea", "term",
+    # Common given names extracted as proper nouns from book-review titles
+    "david", "john", "robert", "richard", "james", "william", "michael",
+    "joseph", "peter", "charles", "mark", "thomas", "paul", "daniel",
+    "steven", "stephen", "andrew", "christopher", "edward", "george",
+    "anna", "mary", "susan", "elizabeth", "barbara", "patricia", "linda",
+    "carol", "ruth", "helen", "janet",
+    # Short first names (≤4 chars) not caught by the length filter
+    "carl", "ian", "jim", "ben", "don", "bob", "max", "leo",
+    "sal", "lou", "tom", "ray", "joe", "ron", "ken", "jay", "amy",
+    "ann", "sue", "kay", "kim", "gary", "hans", "otto", "kurt",
+    "hugo", "leon", "jean", "lars", "rolf", "fred", "jack", "joel",
+    "ryan", "alan", "adam", "eric", "erik", "evan",
+    "alex", "andy", "aaron", "roger", "frank", "harry", "larry",
+    "barry", "terry", "jerry", "henry",
+    # Longer first names
+    "bill", "ernst", "jeff", "allen", "scott", "milton", "bela",
+    "igor", "arnold", "elliott", "alban",
+    # Titles / honorifics
+    "mr", "ms", "dr", "prof",
+    # Generic English words not caught by KeyBERT's stop-word list
+    "call", "what", "life", "view", "book", "open", "world", "order",
+    "guide", "mind", "basic", "reply", "brief", "class", "word",
+    "text", "list", "show", "case", "area", "note", "page",
+    "role", "body", "line", "hear", "real", "said", "such",
+    "than", "being", "last", "aspects", "aspect", "good", "high",
+    "great", "focus", "logic", "people", "essays", "essay",
+    "will", "past", "large", "free", "code", "tool", "lost",
+    "city", "thought", "middle", "edited", "problem", "problems",
+    "lines", "meta",
+    # Standalone words only meaningful in compound forms
+    "cold", "live",
+    # Misc noise / extraction artefacts
+    "sixtes", "blue", "selected", "possible", "sulle", "tales",
+    # Geographic terms too broad to be meaningful alone
+    "york",
+    # Compound-only terms meaningless as standalone keywords
+    "cross",
+    # Editorial / housekeeping artefacts
+    "correction", "corrections", "erratum", "errata",
+    "editorial", "conference", "papers", "reviews", "review",
+    # Compound term that is too generic as a standalone keyword
+    "music theory",
+    # Short foreign-language articles / prepositions / particles
+    # (2–3 chars handled by the extraction length guard; these 4-char ones slip through)
+    "eine", "avec", "dans", "pour", "mais", "oder", "über", "nach",
+    "beim", "wird", "auch", "sich", "dass", "dalla", "degli", "delle",
+    "nella", "dello", "para", "como", "pero", "sino",
+    # OL / library catalog classification phrases (too generic for music theory)
+    "history and criticism", "criticism and interpretation",
+    "music, history and criticism",
+    "music, history and criticism, 19th century",
+    "music, history and criticism, 20th century",
+    "music, history and criticism, 18th century",
+    "music, history and criticism, 17th century",
+    "composers, biography", "music, social aspects",
+    "music, philosophy and aesthetics", "philosophy and aesthetics",
+    "analysis, appreciation", "music, british, history and criticism",
+    "music, american, history and criticism",
+    "music, german", "music, french", "music, italian",
+    "music, russian", "music, austrian", "music, european",
+    # Generic standalone terms surfaced from OL/CUP subject tags
+    "biography", "musicians", "social aspects",
+    "letters", "cambridge", "companion", "studies",
+    "art", "practice", "context", "america", "musical criticism",
+    "psychology", "computer",
+    # LCSH geographic/categorical compound phrases
+    "composers, great britain", "composers, germany", "music, british", "music, american",
+    "musicians, biography", "psychological aspects", "political aspects", "instruction & study",
+    "opera, italy", "opera, history and criticism", "songs and music", "catholic church",
+    "music, psychological aspects", "music, history and criticism, 500-1400",
+    # Foreign-language genre/form terms (no non-ASCII but still non-English)
+    "musik", "musique", "oper",
+    # Pure generics with no analytical value
+    "history", "general", "books", "authors", "textbooks", "encyclopedia", "bibliography",
+    "appreciation", "making", "words", "understanding", "nature", "origins",
+    "sounds", "conversation", "interview", "construction", "evolution",
+    "social", "relationships", "critical", "historical", "perspectives",
+    "cycles", "correspondence", "writings", "british",
+    # First-name fragments extracted from composer full names
+    "heinrich", "leonard", "anton", "johann", "alexander", "benjamin", "arthur", "edgard", "luigi",
+    # Geographic terms too broad to be useful
+    "england", "london", "france", "britain",
+    # LCSH compounds
+    "biography & autobiography", "opera, france",
+    # Generic words with no analytical value
+    "communications", "report", "commentary", "special", "complete", "explorations",
+    "other", "becoming", "systems", "structures", "models", "principles", "concepts",
+    "patterns", "interaction", "theoretical", "multiple", "sources", "comments",
+    "moment", "generalized", "common", "design", "reading", "science", "reflections",
+    "techniques", "organization", "university", "topics", "materials", "combination",
+    "relations", "formal", "analytical", "analytic", "analysing", "analyses",
+    # LCSH analysis compounds
+    "symphonies, analysis, appreciation", "string quartets, analysis, appreciation",
+    "analyse musicale", "musikalische analyse", "muzikale analyse",
+])
+
+# Regex patterns matching editorial/boilerplate article titles to skip during
+# title-based keyword extraction.
+import re as _re
+_EDITORIAL_TITLE_RE = _re.compile(
+    r"^\s*(\[?letter\b|back\s+matter|front\s+matter|cover|acknowledgements?|acknowledgments?|"
+    r"in\s+memoriam|editorial\s+notes?|instructions?\s+for\s+contributors?|"
+    r"errata|corrigendum|corrigenda|index|preface|foreword|introduction|"
+    r"volume\s+\d|vol\.\s*\d|issue\s+\d|table\s+of\s+contents|"
+    r"announcements?|news\s+and\s+notes|notices?|reviews?\s+editor|"
+    r"sam\s+volume|back\s+issues?)",
+    _re.IGNORECASE,
 )
 
 # ---------------------------------------------------------------------------
@@ -113,17 +384,163 @@ def _get_model() -> "_KBType":
 # Keyword extraction (used by scrapers and pipeline step 0)
 # ---------------------------------------------------------------------------
 
-def extract_keywords(text: str, top_n: int = 10) -> list[str]:
+# Sorted longest-first so substring matching prefers the most specific term
+_DOMAIN_SORTED: list[str] = sorted(_DOMAIN_LOWER, key=len, reverse=True)
+
+# Abbreviated prefix → canonical domain term, for cases where a title uses
+# the shortened form (e.g. "neo-riemannian transformations" rather than
+# "neo-riemannian theory").  Only prefixes that are unambiguous are listed.
+_DOMAIN_PREFIX_MAP: dict[str, str] = {
+    "neo-riemannian":        "neo-riemannian theory",
+    "post-tonal":            "post-tonal theory",
+    "pitch-class set":       "pitch-class set theory",
+    "schenkerian":           "schenkerian analysis",
+    "twelve-tone":           "twelve-tone technique",
+    "transformational":      "transformational theory",
+    "hexachordal":           "hexachordal combinatoriality",
+    "forte":                 "forte set theory",
+    "gjerdingen":            "gjerdingen schema theory",
+    "lerdahl-jackendoff":    "lerdahl-jackendoff theory",
+    "hepokoski-darcy":       "hepokoski-darcy sonata theory",
+    "caplin":                "caplin formal theory",
+    "tymoczko":              "tymoczko voice-leading geometry",
+    "riemannian":            "riemannian theory",
+    "lewinean":              "lewinean theory",
+    "narmourian":            "narmourian theory",
+}
+
+# Common English words that appear capitalised in titles but are not proper nouns
+_COMMON_TITLE_WORDS: frozenset[str] = frozenset({
+    "the", "a", "an", "in", "on", "at", "for", "of", "to", "and", "or",
+    "but", "nor", "yet", "so", "with", "by", "as", "if", "is", "are",
+    "was", "were", "be", "been", "have", "has", "had", "do", "does", "did",
+    "that", "this", "these", "those", "its", "his", "her", "their", "our",
+    "my", "your", "we", "they", "he", "she", "it", "i", "new", "old",
+    "some", "any", "all", "both", "each", "every", "no", "not",
+    "part", "vol", "op", "opus", "no", "issue", "review", "essay", "notes",
+    "music", "musical",
+    # Generic analytical / descriptive words
+    "use", "uses", "using", "study", "analysis", "approach", "approaches",
+    "theory", "theories", "toward", "towards", "beyond", "between", "among",
+    "from", "into", "through", "about", "after", "before", "since", "until",
+    "role", "case", "cases", "form", "forms", "style", "styles", "concept",
+    "function", "structure", "process", "model", "method", "technique",
+    "tradition", "history", "critique", "reception", "voice", "sound",
+    "work", "works", "song", "songs", "piece", "pieces",
+    "one", "two", "three", "four", "five", "six", "seven", "eight",
+    "first", "second", "third", "late", "early", "recent", "modern",
+    # Geographical / political adjectives
+    "western", "eastern", "northern", "southern", "central",
+    "american", "european", "german", "french", "english", "italian",
+    "russian", "japanese", "chinese", "african", "latin", "democratic",
+    "republic", "national", "international", "global",
+    # Common article-title verbs / prepositions easily confused with names
+    "post", "neo", "pre", "anti", "non",
+})
+
+_POSSESSIVE_RE = re.compile(r"'s$")
+_PROPER_RE = re.compile(r"\b([A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ][a-zàâäéèêëîïôùûü]{1,}(?:'s)?)\b")
+
+
+def _domain_substring_match(title_lower: str) -> list[str]:
     """
-    Return up to *top_n* keywords for *text* using a two-pass KeyBERT strategy.
+    Return all domain terms that appear verbatim (as substrings) in the title.
+    Longer terms are matched first; once a span is claimed it is not re-matched.
+    Falls back to _DOMAIN_PREFIX_MAP for abbreviated/hyphenated forms.
+    """
+    found: list[str] = []
+    remaining = title_lower
+
+    for term in _DOMAIN_SORTED:
+        if term in remaining:
+            found.append(term)
+            remaining = remaining.replace(term, " " * len(term), 1)
+
+    # Prefix fallback: catch "neo-riemannian transformations" → "neo-riemannian theory"
+    for prefix, canonical in _DOMAIN_PREFIX_MAP.items():
+        if canonical not in found and prefix in remaining:
+            found.append(canonical)
+            remaining = remaining.replace(prefix, " " * len(prefix), 1)
+
+    return found
+
+
+def _extract_proper_nouns(raw_title: str, exclude: set[str]) -> list[str]:
+    """
+    Extract capitalised words from a title that are likely proper nouns
+    (composer/theorist names, work titles) and are not already covered by
+    a domain match.
+    """
+    results: list[str] = []
+    seen: set[str] = set()
+    for m in _PROPER_RE.findall(raw_title):
+        low = _POSSESSIVE_RE.sub("", m.lower())   # strip possessive suffix properly
+        if len(low) < 4:  # 3-char names (Ian, Jim, Don…) are almost never meaningful alone
+            continue
+        if low in _COMMON_TITLE_WORDS or low in seen:
+            continue
+        if any(low in ex or ex in low for ex in exclude):
+            continue
+        seen.add(low)
+        results.append(low)
+    return results
+
+
+def _remove_redundant_ngrams(kws: list[str], domain_set: set[str]) -> list[str]:
+    """
+    Drop multi-word phrases whose component words all appear as individual
+    extracted unigrams AND that are not established domain compound terms.
+    e.g. ["berg", "wozzeck", "berg wozzeck"] → ["berg", "wozzeck"]
+         ["voice leading"] kept even if "voice" is a unigram (it's a domain term)
+    """
+    unigrams = {kw for kw in kws if len(kw.split()) == 1}
+    result = []
+    for kw in kws:
+        words = kw.split()
+        if len(words) == 1 or kw in domain_set:
+            result.append(kw)
+        elif not all(w in unigrams for w in words):
+            result.append(kw)
+        # else: all words individually present and not a domain compound → drop
+    return result
+
+
+def extract_keywords_from_title(raw_title: str, top_n: int = 3) -> list[str]:
+    """
+    Extract up to *top_n* keywords from a short title string.
+
+    Strategy:
+    1. Direct substring match against the full domain vocabulary (longest
+       terms first) — reliably captures compound terms like "voice leading".
+    2. Proper-noun extraction for capitalised words not covered by step 1
+       (composer/theorist names, work titles, etc.).
+
+    No semantic embedding is used for titles — they are too short for reliable
+    cosine similarity scoring.
+    """
+    if not raw_title:
+        return []
+    title_lower = raw_title.lower()
+
+    domain_kws = _domain_substring_match(title_lower)
+    proper_nouns = _extract_proper_nouns(raw_title, exclude=set(domain_kws))
+
+    merged = list(dict.fromkeys(domain_kws + proper_nouns))
+    return merged[:top_n]
+
+
+def extract_keywords(text: str, top_n: int = 8) -> list[str]:
+    """
+    Return up to *top_n* keywords for an abstract using a two-pass KeyBERT strategy.
 
     Pass 1 — domain scoring
-        Score each term in DOMAIN_TERMS against the document.  Terms whose
-        cosine similarity exceeds _THRESHOLD are included.
+        Score every term in DOMAIN_TERMS against the document. Terms above
+        _THRESHOLD are included verbatim.
 
-    Pass 2 — free extraction
-        Extract novel n-gram phrases (1–3 words) from the text itself using
-        MMR for diversity.  Phrases already covered by pass 1 are dropped.
+    Pass 2 — free extraction (bigrams only, higher diversity)
+        Extract novel 1–2-word phrases not already covered by pass 1.
+        Overlapping n-grams (where all component words are already individually
+        extracted) are pruned.
 
     Returns a deduplicated, relevance-sorted list of lowercase keyword strings.
     """
@@ -134,47 +551,47 @@ def extract_keywords(text: str, top_n: int = 10) -> list[str]:
     model = _get_model()
 
     domain_hits: list[tuple[str, float]] = model.extract_keywords(
-        text,
-        candidates=_DOMAIN_LOWER,
-        top_n=len(_DOMAIN_LOWER),
+        text, candidates=_DOMAIN_LOWER, top_n=len(_DOMAIN_LOWER),
     )
     domain_kws = {kw for kw, score in domain_hits if score >= _THRESHOLD}
 
     free_hits: list[tuple[str, float]] = model.extract_keywords(
         text,
-        keyphrase_ngram_range=(1, 3),
+        keyphrase_ngram_range=(1, 2),
         stop_words="english",
         use_mmr=True,
-        diversity=0.5,
+        diversity=0.7,
         top_n=top_n,
+        nr_candidates=max(top_n * 3, 20),
     )
+    # Reject single tokens shorter than 4 chars that aren't established
+    # short-form music terms (genre tags, solfège, etc.).
+    _SHORT_OK = frozenset({"set", "rap", "key", "pop", "edm", "ars", "art", "air"})
     free_kws = [
         kw for kw, score in free_hits
-        if score >= _THRESHOLD and not _covered_by_domain(kw, domain_kws)
+        if score >= _THRESHOLD + 0.05
+        and not _covered_by_domain(kw, domain_kws)
+        and (len(kw) >= 4 or kw in _SHORT_OK)
     ]
 
-    merged: list[str] = []
-    seen: set[str] = set()
-    for kw in list(domain_kws) + free_kws:
-        norm = kw.strip().lower()
-        if norm and norm not in seen:
-            seen.add(norm)
-            merged.append(norm)
-
+    merged_raw = list(domain_kws) + free_kws
+    merged = list(dict.fromkeys(kw.strip().lower() for kw in merged_raw if kw.strip()))
+    merged = _remove_redundant_ngrams(merged, domain_kws)
     return merged[:top_n]
 
 
 def tag_items_without_keywords(db: sqlite_utils.Database) -> int:
     """
-    For every item that has a non-null abstract but no *explicit* keywords,
-    run extract_keywords() and insert results into item_keywords with
-    source='extracted'.
+    For every item that has no *explicit* keywords:
+    - If it has an abstract, run KeyBERT on the abstract (weight 0.8).
+    - Else if it has a title, run KeyBERT on the title (weight 0.5).
 
     Returns the number of items processed.
     """
     from db import add_keywords_to_item  # avoid circular import at module level
 
-    query = """
+    # Abstract-based extraction (higher confidence)
+    abstract_query = """
         SELECT i.id, i.abstract
         FROM items i
         WHERE i.abstract IS NOT NULL
@@ -184,13 +601,35 @@ def tag_items_without_keywords(db: sqlite_utils.Database) -> int:
               WHERE ik.item_id = i.id AND ik.source = 'explicit'
           )
     """
-    rows = list(db.execute(query).fetchall())
+    abstract_rows = list(db.execute(abstract_query).fetchall())
     processed = 0
 
-    for item_id, abstract in rows:
+    for item_id, abstract in abstract_rows:
         keywords = extract_keywords(abstract)
         if keywords:
             add_keywords_to_item(db, item_id, keywords, source="extracted", weight=0.8)
+        processed += 1
+
+    # Title-based extraction for items with no abstract and no keywords yet
+    title_query = """
+        SELECT i.id, i.title
+        FROM items i
+        WHERE (i.abstract IS NULL OR i.abstract = '')
+          AND i.title IS NOT NULL
+          AND i.title != ''
+          AND NOT EXISTS (
+              SELECT 1 FROM item_keywords ik
+              WHERE ik.item_id = i.id
+          )
+    """
+    title_rows = list(db.execute(title_query).fetchall())
+
+    for item_id, title in title_rows:
+        if _EDITORIAL_TITLE_RE.match(title):
+            continue
+        keywords = extract_keywords_from_title(title, top_n=3)
+        if keywords:
+            add_keywords_to_item(db, item_id, keywords, source="extracted", weight=0.5)
         processed += 1
 
     return processed
@@ -414,7 +853,7 @@ def recalculate_weights(db: sqlite_utils.Database) -> None:
     """
     Recompute each keyword's weight as a normalized 0–1 score:
 
-        raw = (article_count × 1.0) + (book_count × 2.0) + (chapter_count × 0.5)
+        raw = (article_count × 1.0) + (book_count × 1.5) + (chapter_count × 0.5)
         weight = raw / max(raw across all keywords)
 
     Updates keywords.weight in place.
@@ -425,7 +864,7 @@ def recalculate_weights(db: sqlite_utils.Database) -> None:
             SELECT
                 k.id,
                 SUM(CASE WHEN i.item_type = 'article' THEN 1.0 ELSE 0 END)  AS a,
-                SUM(CASE WHEN i.item_type = 'book'    THEN 2.0 ELSE 0 END)  AS b,
+                SUM(CASE WHEN i.item_type = 'book'    THEN 1.5 ELSE 0 END)  AS b,
                 SUM(CASE WHEN i.item_type = 'chapter' THEN 0.5 ELSE 0 END)  AS c
             FROM keywords k
             LEFT JOIN item_keywords ik ON ik.keyword_id = k.id
@@ -448,6 +887,12 @@ def recalculate_weights(db: sqlite_utils.Database) -> None:
                 "UPDATE keywords SET weight = ? WHERE id = ?",
                 [raw / max_score, kid],
             )
+
+    # Prune keywords that have no remaining links (orphaned by merges/deletions)
+    db.conn.execute(
+        "DELETE FROM keywords WHERE id NOT IN (SELECT DISTINCT keyword_id FROM item_keywords)"
+    )
+    db.conn.commit()
 
 
 # ---------------------------------------------------------------------------

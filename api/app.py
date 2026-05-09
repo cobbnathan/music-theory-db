@@ -12,12 +12,13 @@ GET /api/health                           liveness check
 """
 from __future__ import annotations
 
+import os
 import re
 import sqlite3
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, Response, g, jsonify, request
+from flask import Flask, Response, g, jsonify, request, send_from_directory
 from flask_caching import Cache
 from flask_cors import CORS
 
@@ -34,8 +35,10 @@ cache = Cache(config={
 })
 cache.init_app(app)
 
-DB_PATH    = Path(__file__).parent.parent / "data" / "music_theory.db"
+_default_db = Path(__file__).parent.parent / "data" / "music_theory.db"
+DB_PATH    = Path(os.environ.get("DATABASE_PATH", str(_default_db)))
 COVER_BASE = "https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg"
+FRONTEND   = Path(__file__).parent.parent / "frontend"
 
 # ---------------------------------------------------------------------------
 # FTS index management
@@ -125,11 +128,14 @@ def close_db(exc: BaseException | None = None) -> None:
 # ---------------------------------------------------------------------------
 
 def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
-    """Convert a Row to a plain dict, injecting cover_url for books."""
+    """Convert a Row to a plain dict, resolving cover_url for books."""
     d = dict(row)
     d.pop("_score", None)                       # internal ranking field
-    cover_isbn = d.get("cover_isbn")
-    d["cover_url"] = COVER_BASE.format(isbn=cover_isbn) if cover_isbn else None
+    # Prefer stored cover_url (from Google Books scraper), then fall back to
+    # Open Library cover derived from cover_isbn or the book's own isbn.
+    if not d.get("cover_url"):
+        isbn_for_cover = d.get("cover_isbn") or d.get("isbn")
+        d["cover_url"] = COVER_BASE.format(isbn=isbn_for_cover) if isbn_for_cover else None
     return d
 
 
@@ -189,8 +195,18 @@ def get_keywords() -> Response:
     ------------
     decade : str, optional
         Restrict item counts to a specific decade, e.g. ``1990s`` (1990–1999).
+    type : str, optional
+        Restrict to keywords that appear on items of this type:
+        ``article``, ``book``, or ``chapter``.
     """
     decade_str = request.args.get("decade", "").strip()
+    type_str   = request.args.get("type",   "").strip().lower()
+
+    if type_str and type_str not in {"article", "book", "chapter"}:
+        return _err(f"Invalid type {type_str!r}. Allowed: article, book, chapter.")
+
+    params: list[Any] = []
+    where_extra = ""
 
     if decade_str:
         decade = _parse_decade(decade_str)
@@ -199,18 +215,30 @@ def get_keywords() -> Response:
                 f"Invalid decade {decade_str!r}. Use a string like '1990s', '2000s', etc."
             )
         yr_lo, yr_hi = decade
-        sql = (
-            _KEYWORDS_SQL
-            + " AND i.year BETWEEN ? AND ?"
-              " GROUP BY k.id"
-              " HAVING article_count + book_count + chapter_count > 0"
-              " ORDER BY k.weight DESC"
-        )
-        rows = get_db().execute(sql, [yr_lo, yr_hi]).fetchall()
-    else:
-        sql = _KEYWORDS_SQL + " GROUP BY k.id ORDER BY k.weight DESC"
-        rows = get_db().execute(sql).fetchall()
+        where_extra += " AND i.year BETWEEN ? AND ?"
+        params += [yr_lo, yr_hi]
 
+    if type_str:
+        where_extra += " AND i.item_type = ?"
+        params.append(type_str)
+
+    # When filtering by type, require ≥5 items of that type specifically.
+    if type_str:
+        having = (
+            " HAVING COUNT(DISTINCT CASE WHEN i.item_type = ? THEN ik.item_id END) >= 5"
+            " AND article_count + book_count + chapter_count > 0"
+        )
+        params.append(type_str)
+    elif decade_str:
+        having = (
+            " HAVING COUNT(DISTINCT ik.item_id) >= 5"
+            " AND article_count + book_count + chapter_count > 0"
+        )
+    else:
+        having = " HAVING COUNT(DISTINCT ik.item_id) >= 5"
+
+    sql = _KEYWORDS_SQL + where_extra + " GROUP BY k.id" + having + " ORDER BY k.weight DESC"
+    rows = get_db().execute(sql, params).fetchall()
     return jsonify([dict(r) for r in rows])
 
 
@@ -242,7 +270,8 @@ def get_items() -> Response:
         )
 
     sql = """
-        SELECT DISTINCT i.*
+        SELECT i.*,
+               MAX(CASE WHEN ik.source = 'explicit' THEN 1 ELSE 0 END) AS kw_explicit
         FROM items         i
         JOIN item_keywords ik ON ik.item_id    = i.id
         JOIN keywords      k  ON k.id          = ik.keyword_id
@@ -254,7 +283,7 @@ def get_items() -> Response:
         sql += " AND i.item_type = ?"
         params.append(item_type)
 
-    sql += " ORDER BY i.year DESC"
+    sql += " GROUP BY i.id ORDER BY i.year DESC"
 
     rows = get_db().execute(sql, params).fetchall()
     return jsonify([_row_to_dict(r) for r in rows])
@@ -310,38 +339,51 @@ def search() -> Response:
 # ---------------------------------------------------------------------------
 
 @app.get("/api/stats")
-@cache.cached(timeout=3600)
+@cache.cached(timeout=3600, query_string=True)
 def get_stats() -> Response:
     """
     Return aggregate database statistics.
+
+    Query params
+    ------------
+    decade : str, optional
+        Restrict item counts to a decade, e.g. ``1990s``.
 
     Response fields
     ---------------
     articles, books, chapters : int
         Item counts by type.
     keywords : int
-        Total keyword rows.
+        Total keyword rows (always global, unaffected by decade filter).
     journals : int
         Number of distinct journal names.
     publishers : int
         Number of distinct publisher names (non-null).
     year_min, year_max : int | null
-        Earliest and latest publication years (zero-years excluded).
+        Earliest and latest publication years in scope.
     """
     conn = get_db()
 
+    decade_str = request.args.get("decade", "").strip()
+    decade = _parse_decade(decade_str) if decade_str else None
+
+    where   = "WHERE year BETWEEN ? AND ?" if decade else ""
+    params  = list(decade) if decade else []
+
     row = conn.execute(
-        """
+        f"""
         SELECT
-            SUM(CASE WHEN item_type = 'article' THEN 1 ELSE 0 END)              AS articles,
-            SUM(CASE WHEN item_type = 'book'    THEN 1 ELSE 0 END)              AS books,
-            SUM(CASE WHEN item_type = 'chapter' THEN 1 ELSE 0 END)              AS chapters,
-            COUNT(DISTINCT NULLIF(TRIM(journal),   ''))                          AS journals,
-            COUNT(DISTINCT NULLIF(TRIM(publisher), ''))                          AS publishers,
-            MIN(CASE WHEN year > 0 THEN year END)                               AS year_min,
-            MAX(CASE WHEN year > 0 THEN year END)                               AS year_max
+            SUM(CASE WHEN item_type = 'article' THEN 1 ELSE 0 END)     AS articles,
+            SUM(CASE WHEN item_type = 'book'    THEN 1 ELSE 0 END)     AS books,
+            SUM(CASE WHEN item_type = 'chapter' THEN 1 ELSE 0 END)     AS chapters,
+            COUNT(DISTINCT NULLIF(TRIM(journal),   ''))                 AS journals,
+            COUNT(DISTINCT NULLIF(TRIM(publisher), ''))                 AS publishers,
+            MIN(CASE WHEN year > 0 THEN year END)                      AS year_min,
+            MAX(CASE WHEN year > 0 THEN year END)                      AS year_max
         FROM items
-        """
+        {where}
+        """,
+        params,
     ).fetchone()
 
     keywords = conn.execute("SELECT COUNT(*) FROM keywords").fetchone()[0]
@@ -355,6 +397,79 @@ def get_stats() -> Response:
         "publishers": row["publishers"] or 0,
         "year_min":   row["year_min"],
         "year_max":   row["year_max"],
+    })
+
+
+# ---------------------------------------------------------------------------
+# GET /api/items/<id>/keywords
+# ---------------------------------------------------------------------------
+
+@app.get("/api/items/<int:item_id>/keywords")
+@cache.cached(timeout=3600)
+def get_item_keywords(item_id: int) -> Response:
+    """Return all keywords tagged on a specific item, with their source."""
+    rows = get_db().execute(
+        """
+        SELECT k.keyword, ik.source
+        FROM item_keywords ik
+        JOIN keywords k ON k.id = ik.keyword_id
+        WHERE ik.item_id = ?
+        ORDER BY ik.source DESC, k.keyword
+        """,
+        [item_id],
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+# ---------------------------------------------------------------------------
+# GET /api/items/<id>/chapters
+# ---------------------------------------------------------------------------
+
+@app.get("/api/items/<int:item_id>/chapters")
+@cache.cached(timeout=3600)
+def get_chapters(item_id: int) -> Response:
+    """Return chapters belonging to a book (parent_id = item_id)."""
+    rows = get_db().execute(
+        "SELECT * FROM items WHERE parent_id = ? ORDER BY year DESC, title",
+        [item_id],
+    ).fetchall()
+    return jsonify([_row_to_dict(r) for r in rows])
+
+
+# ---------------------------------------------------------------------------
+# GET /api/sources
+# ---------------------------------------------------------------------------
+
+@app.get("/api/sources")
+@cache.cached(timeout=3600)
+def get_sources() -> Response:
+    """Return per-journal and per-publisher item counts for the info panel."""
+    conn = get_db()
+    journals = conn.execute(
+        """
+        SELECT TRIM(journal) AS name, COUNT(*) AS count
+        FROM items
+        WHERE item_type IN ('article', 'chapter')
+          AND journal IS NOT NULL AND TRIM(journal) != ''
+        GROUP BY TRIM(journal)
+        ORDER BY count DESC
+        LIMIT 30
+        """
+    ).fetchall()
+    publishers = conn.execute(
+        """
+        SELECT TRIM(publisher) AS name, COUNT(*) AS count
+        FROM items
+        WHERE item_type = 'book'
+          AND publisher IS NOT NULL AND TRIM(publisher) != ''
+        GROUP BY TRIM(publisher)
+        ORDER BY count DESC
+        LIMIT 15
+        """
+    ).fetchall()
+    return jsonify({
+        "journals":   [dict(r) for r in journals],
+        "publishers": [dict(r) for r in publishers],
     })
 
 
@@ -373,8 +488,22 @@ def health() -> Response:
 
 
 # ---------------------------------------------------------------------------
+# Static frontend (catch-all — must be last so /api/* routes take priority)
+# ---------------------------------------------------------------------------
+
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_frontend(path: str) -> Response:
+    """Serve index.html or any static asset from the frontend/ directory."""
+    target = FRONTEND / path
+    if path and target.is_file():
+        return send_from_directory(str(FRONTEND), path)
+    return send_from_directory(str(FRONTEND), "index.html")
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5001, debug=False)
