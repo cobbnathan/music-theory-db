@@ -16,9 +16,10 @@ cd "$ROOT"
 
 echo "==> Regenerating static data..."
 python3 scripts/export_static.py
+python3 scripts/build_info.py
 
 echo "==> Committing updated data..."
-git add frontend/data/data.json frontend/index-gh.html
+git add frontend/data/data.json frontend/data/info.json frontend/index-gh.html
 git diff --cached --quiet && echo "    (nothing changed)" || git commit -m "Update static data"
 
 echo "==> Pushing frontend/ to gh-pages branch..."
