@@ -56,21 +56,44 @@ def main() -> None:
         LIMIT 30
     """).fetchall()
 
-    # Top publishers by book count
-    publishers = conn.execute("""
+    # Canonical publisher name map — normalises variant spellings from Google Books
+    _CANONICAL: dict[str, str] = {
+        "Oxford University Press, USA": "Oxford University Press",
+        "OUP Oxford":                   "Oxford University Press",
+        "Univ of California Press":     "University of California Press",
+        "Mit Press":                    "MIT Press",
+        "MIT Press (MA)":               "MIT Press",
+        "W. W. Norton & Company":                "W. W. Norton",
+        "W W Norton & Company Incorporated":     "W. W. Norton",
+        "New York : W.W. Norton":                "W. W. Norton",
+        "New York : W. W. Norton":               "W. W. Norton",
+        "New Haven [Conn.] : Yale University Press": "Yale University Press",
+        "University of MICHIGAN REGIONAL":       "University of Michigan Press",
+        "University Rochester Press":            "University of Rochester Press",
+        "Eastman Studies in Music":              "University of Rochester Press",
+    }
+
+    raw_publishers = conn.execute("""
         SELECT TRIM(publisher) AS name, COUNT(*) AS count
         FROM items
         WHERE item_type = 'book'
           AND publisher IS NOT NULL AND TRIM(publisher) != ''
         GROUP BY TRIM(publisher)
         ORDER BY count DESC
-        LIMIT 15
     """).fetchall()
+
+    pub_counts: dict[str, int] = {}
+    for r in raw_publishers:
+        canonical = _CANONICAL.get(r["name"], r["name"])
+        pub_counts[canonical] = pub_counts.get(canonical, 0) + r["count"]
+
+    publishers_sorted = sorted(pub_counts.items(), key=lambda x: -x[1])
+    publishers = [{"name": n, "count": c} for n, c in publishers_sorted]
 
     payload = {
         "stats":      stats,
         "journals":   [dict(r) for r in journals],
-        "publishers": [dict(r) for r in publishers],
+        "publishers": publishers,
     }
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

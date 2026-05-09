@@ -115,7 +115,12 @@ def main() -> None:
     print("Patching index.html for GitHub Pages…")
     src = SRC_HTML.read_text()
     inject = '<script>window.STATIC_DATA_URL="data/data.json";</script>\n  '
-    patched = src.replace('<script src="app.js">', inject + '<script src="app.js">')
+    patched = re.sub(
+        r'(<script src="app\.js[^"]*">)',
+        inject + r'\1',
+        src,
+        count=1,
+    )
     if inject not in patched:
         print("  WARNING: could not inject STATIC_DATA_URL — patch index.html manually.")
     OUT_HTML.write_text(patched)

@@ -5,7 +5,7 @@
     "chapters": 0,
     "journals": 12,
     "publishers": 27,
-    "keywords": 12418,
+    "keywords": 12288,
     "year_min": 1954,
     "year_max": 2027
   },
@@ -65,40 +65,36 @@
       "count": 1197
     },
     {
+      "name": "Oxford University Press",
+      "count": 33
+    },
+    {
       "name": "University of Michigan Press",
-      "count": 23
+      "count": 24
+    },
+    {
+      "name": "MIT Press",
+      "count": 22
     },
     {
       "name": "Routledge",
       "count": 21
     },
     {
-      "name": "MIT Press",
-      "count": 20
+      "name": "W. W. Norton",
+      "count": 19
     },
     {
-      "name": "Oxford University Press",
-      "count": 19
+      "name": "University of California Press",
+      "count": 17
     },
     {
       "name": "University of Chicago Press",
       "count": 16
     },
     {
-      "name": "Univ of California Press",
-      "count": 14
-    },
-    {
       "name": "Princeton University Press",
       "count": 14
-    },
-    {
-      "name": "W. W. Norton",
-      "count": 13
-    },
-    {
-      "name": "Oxford University Press, USA",
-      "count": 11
     },
     {
       "name": "Cornell University Press",
@@ -106,19 +102,23 @@
     },
     {
       "name": "Yale University Press",
-      "count": 8
+      "count": 9
     },
     {
-      "name": "University Rochester Press",
-      "count": 8
+      "name": "University of Rochester Press",
+      "count": 9
     },
     {
-      "name": "University of California Press",
+      "name": "Duke University Press",
       "count": 3
     },
     {
-      "name": "OUP Oxford",
-      "count": 3
+      "name": "Indiana University Press",
+      "count": 2
+    },
+    {
+      "name": "Cambridge Scholars Publishing",
+      "count": 2
     }
   ]
 }
