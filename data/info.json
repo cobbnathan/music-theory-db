@@ -11,12 +11,12 @@
   },
   "journals": [
     {
-      "name": "Perspectives of New Music",
-      "count": 1536
+      "name": "Music Perception",
+      "count": 1690
     },
     {
-      "name": "Music Perception",
-      "count": 1455
+      "name": "Perspectives of New Music",
+      "count": 1536
     },
     {
       "name": "Music Theory Spectrum",
@@ -37,10 +37,6 @@
     {
       "name": "Music Analysis",
       "count": 856
-    },
-    {
-      "name": "Music Perception: An Interdisciplinary Journal",
-      "count": 235
     },
     {
       "name": "Music Theory and Analysis (MTA)",
