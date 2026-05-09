@@ -33,7 +33,17 @@ SUBTREE_COMMIT=$(git subtree split --prefix frontend)
 # Create/reset a local deploy branch from that subtree commit
 git branch -f _gh_pages_tmp "$SUBTREE_COMMIT"
 
-# Stash any uncommitted changes so git checkout can proceed
+# Copy any untracked/modified files that git checkout would clobber.
+# Binary files (especially the SQLite db) can confuse stash across subtree
+# branches, so we move them to a temp location and restore afterward.
+DB_SRC="$ROOT/data/music_theory.db"
+DB_TMP=""
+if [ -f "$DB_SRC" ]; then
+  DB_TMP="$(mktemp)"
+  cp "$DB_SRC" "$DB_TMP"
+fi
+
+# Stash any remaining tracked changes
 STASH_OUT=$(git stash push -m "deploy-script-tmp" 2>&1)
 STASHED=$( echo "$STASH_OUT" | grep -c "Saved working" || true )
 
@@ -49,6 +59,12 @@ git checkout main
 
 # Restore stashed changes
 [ "$STASHED" -gt 0 ] && git stash pop
+
+# Restore the db file if we backed it up
+if [ -n "$DB_TMP" ] && [ -f "$DB_TMP" ]; then
+  cp "$DB_TMP" "$DB_SRC"
+  rm -f "$DB_TMP"
+fi
 
 # Force-push the deploy branch to origin/gh-pages
 git push origin "${DEPLOY_COMMIT}:refs/heads/gh-pages" --force
