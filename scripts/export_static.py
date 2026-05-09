@@ -15,6 +15,8 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from collections import defaultdict
+from itertools import combinations
 from pathlib import Path
 
 ROOT     = Path(__file__).parent.parent
@@ -103,7 +105,40 @@ def main() -> None:
             "kw_explicit_ids":    explicit_by_item.get(iid, []),
         })
 
-    payload = {"keywords": keywords, "items": items}
+    # ── Co-occurrence (cloud keywords only) ──────────────────────────────────
+    print("Computing keyword co-occurrence…")
+    cloud_set = {kw['id'] for kw in keywords if kw['cloud']}
+    cooccur_raw: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
+    for item in items:
+        cloud_in = [kid for kid in item['kw_ids'] if kid in cloud_set]
+        for a, b in combinations(sorted(cloud_in), 2):
+            cooccur_raw[a][b] += 1
+            cooccur_raw[b][a] += 1
+
+    cooccur: dict[str, list] = {}
+    for kid, peers in cooccur_raw.items():
+        top = sorted(peers.items(), key=lambda x: -x[1])[:15]
+        cooccur[str(kid)] = [[pid, c] for pid, c in top]
+    print(f"  {len(cooccur):,} keywords have co-occurrence data")
+
+    # ── Year trends (cloud keywords only) ────────────────────────────────────
+    print("Computing keyword year trends…")
+    by_year_raw: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
+    for item in items:
+        yr = item.get('year', 0)
+        if not yr or yr <= 0:
+            continue
+        for kid in item['kw_ids']:
+            if kid in cloud_set:
+                by_year_raw[kid][yr] += 1
+
+    by_year: dict[str, list] = {
+        str(kid): sorted(yr_counts.items())
+        for kid, yr_counts in by_year_raw.items()
+    }
+    print(f"  {len(by_year):,} keywords have trend data")
+
+    payload = {"keywords": keywords, "items": items, "cooccur": cooccur, "byYear": by_year}
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
