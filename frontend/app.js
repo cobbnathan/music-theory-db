@@ -111,9 +111,8 @@ const ds = {
   sortBy:       'date-desc',
   searchTerms:  [],
   kwText:       '',
-  primaryKwId:  null,   // ID of the keyword whose drawer is open
-  filterKwId:   null,   // secondary keyword for intersection filter
-  filterKwText: '',
+  primaryKwId:  null,         // ID of the keyword whose drawer is open
+  filterKwIds:  new Set(),    // active chip intersection filters (multi-select)
 };
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -467,9 +466,7 @@ function clearCloud() {
 
 function renderSparkline(kwId) {
   drawerSparkline.innerHTML = '';
-  if (!_sd?._byYear) return;
-  const yearMap = _sd._byYear.get(kwId);
-  if (!yearMap) return;
+  if (!_sd?._byKwId) return;
 
   const DECADES = [
     ['pre-1980', 0,    1979],
@@ -480,11 +477,20 @@ function renderSparkline(kwId) {
     ["'20s",     2020, 2029],
   ];
 
-  const data = DECADES.map(([label, lo, hi]) => {
-    let total = 0;
-    for (const [y, c] of yearMap) { if (y >= lo && y <= hi) total += c; }
-    return { label, total };
-  });
+  // Start with all items for the primary keyword, then intersect active chips
+  let items = _sd._byKwId[kwId] || [];
+  if (ds.filterKwIds.size > 0) {
+    for (const fid of ds.filterKwIds) {
+      const fSet = new Set((_sd._byKwId[fid] || []).map(i => i.id));
+      items = items.filter(i => fSet.has(i.id));
+    }
+  }
+  if (!items.length && ds.filterKwIds.size === 0) return;
+
+  const data = DECADES.map(([label, lo, hi]) => ({
+    label,
+    total: items.filter(i => i.year > 0 && i.year >= lo && i.year <= hi).length,
+  }));
 
   const maxVal = Math.max(1, ...data.map(d => d.total));
   const color  = baseColor(_sd._kwById[kwId]?.keyword || '');
@@ -540,32 +546,46 @@ function renderRelatedChips(kwId) {
   if (!peers || !peers.length) return;
 
   const top = peers.slice(0, 10);
+
+  // Build a set of peer IDs that co-occur with every currently selected chip.
+  // A chip is visible if it is already selected OR it co-occurs with all selected chips.
+  const selectedCooccurSets = [...ds.filterKwIds].map(sid => {
+    const sp = _sd._cooccur.get(sid);
+    return sp ? new Set(sp.map(([id]) => id)) : new Set();
+  });
+
+  const visiblePeers = top.filter(([peerId]) => {
+    if (ds.filterKwIds.has(peerId)) return true; // always show selected
+    return selectedCooccurSets.every(s => s.has(peerId));
+  });
+
+  if (!visiblePeers.length) return;
+
   const label = document.createElement('span');
   label.className = 'related-label';
   label.textContent = 'Often paired with:';
   drawerRelated.appendChild(label);
 
-  top.forEach(([peerId, count]) => {
+  visiblePeers.forEach(([peerId, count]) => {
     const kw = _sd._kwById[peerId];
     if (!kw) return;
-    const isActive = ds.filterKwId === peerId;
+    const isActive = ds.filterKwIds.has(peerId);
     const chip = document.createElement('button');
     chip.className = 'related-chip' + (isActive ? ' active' : '');
     chip.title = isActive
-      ? 'Click to remove intersection filter'
-      : `${count} items in common — click to filter to both`;
+      ? 'Click to remove this filter'
+      : `${count} items in common — click to filter`;
     chip.dataset.kwId = String(peerId);
     chip.style.setProperty('--chip-color', baseColor(kw.keyword));
     chip.innerHTML = `<span class="chip-dot"></span>${escapeHtml(kw.keyword)}`;
     chip.addEventListener('click', () => {
-      if (ds.filterKwId === peerId) {
-        ds.filterKwId   = null;
-        ds.filterKwText = '';
+      if (ds.filterKwIds.has(peerId)) {
+        ds.filterKwIds.delete(peerId);
       } else {
-        ds.filterKwId   = peerId;
-        ds.filterKwText = kw.keyword;
+        ds.filterKwIds.add(peerId);
       }
       renderRelatedChips(kwId);
+      renderSparkline(kwId);
       ds.page = 0;
       applyDrawerFilter();
     });
@@ -965,9 +985,8 @@ function closeDrawer() {
   drawerSrchWrap.hidden = true;
   sortBar.hidden        = true;
   pagination.hidden     = true;
-  ds.filterKwId   = null;
-  ds.filterKwText = '';
-  ds.primaryKwId  = null;
+  ds.filterKwIds.clear();
+  ds.primaryKwId = null;
   drawerSparkline.innerHTML = '';
   drawerRelated.innerHTML   = '';
   drawerRelated.hidden      = true;
@@ -989,9 +1008,8 @@ async function openKeywordDrawer(d) {
   ds.searchTerms  = [];
   ds.tab          = 'articles';
   ds.page         = 0;
-  ds.primaryKwId  = null;
-  ds.filterKwId   = null;
-  ds.filterKwText = '';
+  ds.primaryKwId = null;
+  ds.filterKwIds.clear();
   drawerSrchIn.value = '';
   setSortBtn('date-desc');
 
@@ -1065,11 +1083,13 @@ function applyDrawerFilter() {
     ? ds.allItems.filter(i => i.item_type === 'book')
     : ds.allItems.filter(i => i.item_type !== 'book');
 
-  // Intersection filter: keep only items that also have the secondary keyword
+  // Intersection filter: keep only items that have ALL selected chip keywords
   let base = src;
-  if (ds.filterKwId && _sd) {
-    const peerIds = new Set((_sd._byKwId[ds.filterKwId] || []).map(i => i.id));
-    base = src.filter(i => peerIds.has(i.id));
+  if (ds.filterKwIds.size > 0 && _sd) {
+    for (const fid of ds.filterKwIds) {
+      const peerIds = new Set((_sd._byKwId[fid] || []).map(i => i.id));
+      base = base.filter(i => peerIds.has(i.id));
+    }
   }
 
   let filtered = q
