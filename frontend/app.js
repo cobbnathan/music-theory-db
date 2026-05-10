@@ -1622,7 +1622,7 @@ function renderInfoContent(stats, sources) {
       <div class="info-method-block">
         <div class="info-method-title">Cleaning &amp; Normalization</div>
         <p class="info-method-body">
-          Raw records are deduplicated by DOI and normalised: author names are parsed from
+          Raw records are deduplicated by DOI and normalized: author names are parsed from
           varying formats into consistent lists, HTML entities in titles and abstracts are
           decoded, and near-duplicate journal names are merged. A custom normalization
           pipeline then standardises keyword casing, expands common abbreviations
@@ -1651,7 +1651,7 @@ function renderInfoContent(stats, sources) {
         <p class="info-method-body">
           Each keyword receives a weight between 0 and 1 that reflects how frequently and
           prominently it appears across the corpus. Associations from journal articles count
-          more than those from books or chapters. Weights are normalised so that the most
+          more than those from books or chapters. Weights are normalized so that the most
           common keyword in the corpus scores 1.0; the word cloud sizes each term
           proportionally. Keywords below a minimum weight threshold are excluded from the
           cloud to reduce noise.
