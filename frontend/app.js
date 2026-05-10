@@ -547,16 +547,18 @@ function renderRelatedChips(kwId) {
 
   const top = peers.slice(0, 10);
 
-  // Build a set of peer IDs that co-occur with every currently selected chip.
-  // A chip is visible if it is already selected OR it co-occurs with all selected chips.
-  const selectedCooccurSets = [...ds.filterKwIds].map(sid => {
-    const sp = _sd._cooccur.get(sid);
-    return sp ? new Set(sp.map(([id]) => id)) : new Set();
-  });
+  // Compute the item IDs that currently match primary + all selected chips.
+  // A candidate chip is only shown if adding it would still yield ≥1 result.
+  let baseIds = new Set((_sd._byKwId[kwId] || []).map(i => i.id));
+  for (const sid of ds.filterKwIds) {
+    const sIds = new Set((_sd._byKwId[sid] || []).map(i => i.id));
+    baseIds = new Set([...baseIds].filter(id => sIds.has(id)));
+  }
 
   const visiblePeers = top.filter(([peerId]) => {
-    if (ds.filterKwIds.has(peerId)) return true; // always show selected
-    return selectedCooccurSets.every(s => s.has(peerId));
+    if (ds.filterKwIds.has(peerId)) return true; // always show active chips
+    const peerIds = new Set((_sd._byKwId[peerId] || []).map(i => i.id));
+    return [...baseIds].some(id => peerIds.has(id));
   });
 
   if (!visiblePeers.length) return;
@@ -1078,27 +1080,36 @@ function setActiveTab(tab) {
 }
 
 function applyDrawerFilter() {
-  const q   = drawerSrchIn.value.trim().toLowerCase();
-  const src = ds.tab === 'books'
-    ? ds.allItems.filter(i => i.item_type === 'book')
-    : ds.allItems.filter(i => i.item_type !== 'book');
+  const q = drawerSrchIn.value.trim().toLowerCase();
 
-  // Intersection filter: keep only items that have ALL selected chip keywords
-  let base = src;
+  // Compute intersection of all items × all selected chip keywords once
+  let intersected = ds.allItems;
   if (ds.filterKwIds.size > 0 && _sd) {
     for (const fid of ds.filterKwIds) {
       const peerIds = new Set((_sd._byKwId[fid] || []).map(i => i.id));
-      base = base.filter(i => peerIds.has(i.id));
+      intersected = intersected.filter(i => peerIds.has(i.id));
     }
   }
 
-  let filtered = q
-    ? base.filter(i =>
+  // Update tab badge counts to reflect the current intersection
+  if (ds.mode === 'keyword') {
+    const nArt  = intersected.filter(i => i.item_type !== 'book').length;
+    const nBook = intersected.filter(i => i.item_type === 'book').length;
+    tabCountArt.textContent  = nArt;
+    tabCountBook.textContent = nBook;
+  }
+
+  const src = ds.tab === 'books'
+    ? intersected.filter(i => i.item_type === 'book')
+    : intersected.filter(i => i.item_type !== 'book');
+
+  const filtered = q
+    ? src.filter(i =>
         (i.title   || '').toLowerCase().includes(q) ||
         (i.authors || '').toLowerCase().includes(q) ||
         (i.journal || '').toLowerCase().includes(q)
       )
-    : base;
+    : src;
 
   ds.filtered = sortItems(filtered, ds.sortBy);
   ds.page = 0;
