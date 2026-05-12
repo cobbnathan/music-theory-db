@@ -348,8 +348,6 @@ function renderStats(s) {
   if (s.chapters)  parts.push(`${n(s.chapters)} chapters`);
   if (!parts.length) parts.push(`${n((s.articles||0) + (s.books||0) + (s.chapters||0))} items`);
 
-  parts.push(`${n(s.keywords)} keywords`);
-
   if (s.year_min && s.year_max) {
     const label = state.decade === 'pre1980'
       ? `up to ${s.year_max}`
@@ -445,8 +443,9 @@ async function refreshCloud() {
     const total = kws.reduce(
       (s, k) => s + k.article_count + k.book_count + k.chapter_count, 0
     );
-    filterStats.textContent =
-      `${kws.length} keywords · ${total.toLocaleString()} linked items`;
+    filterStats.textContent = (state.decade || state.type)
+      ? `${kws.length} keywords · ${total.toLocaleString()} linked items`
+      : '';
 
   } catch (err) {
     console.error('Cloud load error', err);
@@ -1299,6 +1298,7 @@ function coverImgLoad(img) {
 }
 
 function isReview(item) {
+  if (item.is_review) return true;
   const t = (item.title || '').trimStart();
   return /^(book\s+)?review[\s:]/i.test(t) || /^review of /i.test(t);
 }
