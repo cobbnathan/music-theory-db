@@ -51,7 +51,7 @@ def main() -> None:
     print("Exporting items…")
     item_rows = conn.execute(
         """
-        SELECT id, title, authors, year, item_type, journal, doi, url,
+        SELECT id, title, authors, year, item_type, is_review, journal, doi, url,
                abstract, publisher, volume, issue, isbn, cover_isbn, cover_url,
                parent_id, chapters_available
         FROM items
@@ -90,6 +90,7 @@ def main() -> None:
             "authors":            row["authors"],
             "year":               row["year"] or 0,
             "item_type":          row["item_type"],
+            "is_review":          row["is_review"] or 0,
             "journal":            row["journal"],
             "doi":                row["doi"],
             "url":                row["url"],
